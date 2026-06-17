@@ -2,7 +2,7 @@
  * CartOCR Scraper - Popup Control Script
  */
 
-const CART_OCR_SCRAPE_ACTION = "scrape_cart_v3";
+const CART_OCR_SCRAPE_ACTION = "scrape_cart_v4";
 
 document.addEventListener('DOMContentLoaded', async () => {
     const statusContainer = document.getElementById('status-container');

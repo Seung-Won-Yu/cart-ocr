@@ -3,7 +3,7 @@
  * 핫링크 회피, CORS 우회 및 상품 이미지 저장소 Whitelist 매칭 로직이 탑재된 최종 V6 스크래퍼
  */
 
-var CART_OCR_SCRAPE_ACTION = "scrape_cart_v3";
+var CART_OCR_SCRAPE_ACTION = "scrape_cart_v4";
 
 if (!window.__cartOcrRegisteredActions) {
     window.__cartOcrRegisteredActions = {};

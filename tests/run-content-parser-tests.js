@@ -72,24 +72,52 @@ function extractResult(html) {
     return JSON.parse(match[1].replace(/&quot;/g, "\"").replace(/&amp;/g, "&"));
 }
 
+function extractPass(html) {
+    const match = html.match(/<pre id="result"[^>]*data-pass="([^"]+)"/);
+    if (!match) throw new Error("No data-pass result found in dumped DOM");
+    return match[1] === "true";
+}
+
 async function main() {
     const server = http.createServer(serveFile);
     await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
 
     const { port } = server.address();
     const cases = [
-        `http://www.devicemart.co.kr:${port}/tests/content-parser.test.html?fixture=devicemart`,
-        `http://cart.coupang.com:${port}/tests/content-parser.test.html?fixture=coupang`
+        {
+            name: "devicemart",
+            url: `http://www.devicemart.co.kr:${port}/tests/content-parser.test.html?fixture=devicemart`,
+            type: "json"
+        },
+        {
+            name: "coupang",
+            url: `http://cart.coupang.com:${port}/tests/content-parser.test.html?fixture=coupang`,
+            type: "json"
+        },
+        {
+            name: "devicemart-line-total",
+            url: `http://www.devicemart.co.kr:${port}/tests/devicemart-cart-fixture.html`,
+            type: "pass"
+        },
+        {
+            name: "versioned-action",
+            url: `http://www.devicemart.co.kr:${port}/tests/versioned-action-fixture.html`,
+            type: "pass"
+        }
     ];
 
     try {
-        for (const url of cases) {
-            const html = await dumpDom(url);
-            const result = extractResult(html);
-            if (!result.ok) {
-                throw new Error(`${result.fixture} failed: ${result.error}`);
+        for (const testCase of cases) {
+            const html = await dumpDom(testCase.url);
+            if (testCase.type === "json") {
+                const result = extractResult(html);
+                if (!result.ok) {
+                    throw new Error(`${result.fixture} failed: ${result.error}`);
+                }
+            } else if (!extractPass(html)) {
+                throw new Error(`${testCase.name} failed`);
             }
-            console.log(`${result.fixture}: ok`);
+            console.log(`${testCase.name}: ok`);
         }
     } finally {
         server.close();

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "CartOCR Scraper",
-  "version": "1.14",
+  "version": "1.15",
   "description": "쿠팡, 디바이스마트 등의 장바구니 품목을 자동으로 추출하여 CartOCR 문서 양식으로 변환합니다.",
   "permissions": [
     "activeTab",
