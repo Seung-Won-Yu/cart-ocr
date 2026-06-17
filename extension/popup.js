@@ -2,6 +2,8 @@
  * CartOCR Scraper - Popup Control Script
  */
 
+const CART_OCR_SCRAPE_ACTION = "scrape_cart_v2";
+
 document.addEventListener('DOMContentLoaded', async () => {
     const statusContainer = document.getElementById('status-container');
     const statusDot = document.getElementById('status-dot');
@@ -20,7 +22,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             activeTab = tabs[0];
             const url = activeTab.url;
 
-            if (url.includes("coupang.com/vp/carts")) {
+            if (isCoupangCartUrl(url)) {
                 setScrapeStatus("active", "쿠팡 장바구니 감지됨", "현재 쿠팡 장바구니 페이지를 보고 있습니다.");
                 scrapeBtn.disabled = false;
             } else if (url.includes("coupang.com")) {
@@ -114,24 +116,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     async function requestCartScrape(tabId) {
-        try {
-            return await sendScrapeMessage(tabId);
-        } catch (error) {
-            if (!isMissingContentScriptError(error)) throw error;
+        statusDesc.textContent = "최신 수집 스크립트 연결 중...";
+        await injectScraper(tabId);
+        return sendScrapeMessage(tabId);
+    }
 
-            statusDesc.textContent = "수집 스크립트 연결 중...";
+    async function injectScraper(tabId) {
+        try {
             await chrome.scripting.executeScript({
                 target: { tabId },
                 files: ["content.js"]
             });
-
-            return sendScrapeMessage(tabId);
+        } catch (error) {
+            if (!isMissingContentScriptError(error)) throw error;
         }
     }
 
     function sendScrapeMessage(tabId) {
         return new Promise((resolve, reject) => {
-            chrome.tabs.sendMessage(tabId, { action: "scrape_cart" }, (response) => {
+            chrome.tabs.sendMessage(tabId, { action: CART_OCR_SCRAPE_ACTION }, (response) => {
                 const runtimeError = chrome.runtime.lastError;
                 if (runtimeError) {
                     reject(new Error(runtimeError.message));
@@ -145,5 +148,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function isMissingContentScriptError(error) {
         return /receiving end does not exist|could not establish connection/i.test(error.message || "");
+    }
+
+    function isCoupangCartUrl(url) {
+        try {
+            const parsedUrl = new URL(url);
+            return parsedUrl.hostname.endsWith("coupang.com") &&
+                (parsedUrl.pathname.includes("/vp/carts") || parsedUrl.pathname.includes("/cartView.pang"));
+        } catch (error) {
+            return url.includes("coupang.com/vp/carts") || url.includes("cart.coupang.com/cartView.pang");
+        }
     }
 });

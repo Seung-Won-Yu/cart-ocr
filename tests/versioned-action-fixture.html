@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>CartOCR versioned action fixture</title>
+</head>
+<body>
+    <table id="cart_table">
+        <tbody>
+            <tr>
+                <td><input type="checkbox" checked></td>
+                <td><img src="https://www.devicemart.co.kr/goods_img/test-modem.jpg" alt="LTE-CatM1 내장형 모뎀"></td>
+                <td><a href="/goods/view?no=1">LTE-CatM1 내장형 모뎀 CZ-ME310G1</a></td>
+                <td><input id="goodsCnt1" name="goodsCnt[]" value="5"></td>
+                <td>420,000원</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <pre id="result">pending</pre>
+
+    <script>
+        window.__cartOcrMessageListenerRegistered = true;
+        const listeners = [];
+
+        window.chrome = {
+            runtime: {
+                lastError: null,
+                onMessage: {
+                    addListener(listener) {
+                        listeners.push(listener);
+                    }
+                },
+                sendMessage(request, callback) {
+                    callback({ success: true, data: `image:${request.url}` });
+                }
+            }
+        };
+    </script>
+    <script src="../extension/content.js"></script>
+    <script>
+        setTimeout(() => {
+            listeners[0]({ action: "scrape_cart_v2" }, null, response => {
+                const item = response.items && response.items[0];
+                const pass = listeners.length === 1 &&
+                    response.success === true &&
+                    item &&
+                    item.quantity === 5 &&
+                    item.price === 84000 &&
+                    item.amount === 420000;
+
+                const output = document.getElementById("result");
+                output.dataset.pass = String(pass);
+                output.textContent = JSON.stringify({ pass, response }, null, 2);
+            });
+        }, 0);
+    </script>
+</body>
+</html>

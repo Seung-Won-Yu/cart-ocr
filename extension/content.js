@@ -3,11 +3,17 @@
  * 핫링크 회피, CORS 우회 및 상품 이미지 저장소 Whitelist 매칭 로직이 탑재된 최종 V6 스크래퍼
  */
 
-if (!window.__cartOcrMessageListenerRegistered) {
-    window.__cartOcrMessageListenerRegistered = true;
+var CART_OCR_SCRAPE_ACTION = "scrape_cart_v2";
+
+if (!window.__cartOcrRegisteredActions) {
+    window.__cartOcrRegisteredActions = {};
+}
+
+if (!window.__cartOcrRegisteredActions[CART_OCR_SCRAPE_ACTION]) {
+    window.__cartOcrRegisteredActions[CART_OCR_SCRAPE_ACTION] = true;
 
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-        if (request.action === "scrape_cart") {
+        if (request.action === CART_OCR_SCRAPE_ACTION) {
             scrapeCurrentCart()
                 .then(result => {
                     sendResponse({ success: true, items: result });
