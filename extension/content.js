@@ -205,9 +205,10 @@ async function parseKnownMallCart(debugLog) {
 
             const cells = row.querySelectorAll("td");
 
-            // 1차: CSS 클래스 기반 가격 셀렉터
+            // 디바이스마트 장바구니의 "상품금액"은 단가가 아니라 수량이 반영된 행 금액입니다.
             const priceEl = row.querySelector(".goods_price, .price, td.price, span.price_value, strong.price, td.price_cell");
-            let price = priceEl ? extractUnitPriceFromPriceElement(priceEl, quantity) : 0;
+            let amount = priceEl ? extractPriceFromText(priceEl.textContent) : 0;
+            let price = amount ? deriveUnitPrice(amount, quantity) : 0;
 
             // 2차: 셀렉터 실패 시 → 행 내 모든 <td>를 순회하며 "원" 포함 셀에서 가격 추출
             if (price === 0) {
@@ -237,7 +238,7 @@ async function parseKnownMallCart(debugLog) {
             const imageUrl = resolveImageUrl(imgEl);
             const image = await convertImageToBase64(imageUrl);
 
-            const amount = price * quantity;
+            if (!amount) amount = price * quantity;
             if (name && price > 0) {
                 items.push({ name, price, quantity, amount, image });
             }
@@ -639,7 +640,7 @@ function isAmountHeader(text) {
 }
 
 function isUnitPriceText(text) {
-    return /단가|판매가|가격|상품금액|price|unit|cost|goods_price|price_value|price_cell/i.test(text || "");
+    return /단가|판매가|가격|price|unit|cost|goods_price|price_value|price_cell/i.test(text || "");
 }
 
 function isAmountText(text) {
