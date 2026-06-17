@@ -3,7 +3,7 @@
  * 핫링크 회피, CORS 우회 및 상품 이미지 저장소 Whitelist 매칭 로직이 탑재된 최종 V6 스크래퍼
  */
 
-var CART_OCR_SCRAPE_ACTION = "scrape_cart_v2";
+var CART_OCR_SCRAPE_ACTION = "scrape_cart_v3";
 
 if (!window.__cartOcrRegisteredActions) {
     window.__cartOcrRegisteredActions = {};
@@ -264,7 +264,16 @@ async function parseKnownMallCart(debugLog) {
 
             if (!amount) amount = price * quantity;
             if (name && price > 0) {
-                items.push({ name, price, quantity, amount, image });
+                items.push({
+                    name,
+                    price,
+                    quantity,
+                    amount,
+                    image,
+                    sourceMall: "devicemart",
+                    priceKind: "line-total-derived",
+                    sourceLineAmount: amount
+                });
             }
         }
     } else if (url.includes("coupang.com")) {

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>CartOCR app DeviceMart import fixture</title>
+</head>
+<body>
+    <button id="theme-toggle"><span>dark_mode</span></button>
+
+    <table>
+        <tbody id="table-body"></tbody>
+        <tfoot>
+            <tr id="total-row-container"><td id="total-price"></td></tr>
+        </tfoot>
+    </table>
+
+    <div id="table-actions-container"></div>
+    <button id="add-row-btn">add</button>
+    <div id="export-section"></div>
+    <button id="copy-markdown-btn">copy</button>
+    <button id="download-csv-btn">csv</button>
+    <button id="print-doc-btn">print</button>
+    <table><tbody id="print-table-body"></tbody></table>
+    <span id="print-total-price"></span>
+    <span id="print-date"></span>
+
+    <pre id="result">pending</pre>
+
+    <script>
+        localStorage.setItem("scraped_cart_data", JSON.stringify([
+            {
+                name: "[해외]LT3652 Power Tracking 2A Battery Charger (SMD) [COM-29756]",
+                quantity: 5,
+                price: 93000,
+                amount: 465000,
+                image: "",
+                sourceMall: "devicemart",
+                priceKind: "line-total-derived",
+                sourceLineAmount: 93000
+            },
+            {
+                name: "전류센서(WCS1800)",
+                quantity: 4,
+                price: 22000,
+                amount: 88000,
+                image: "",
+                sourceMall: "devicemart",
+                priceKind: "line-total-derived",
+                sourceLineAmount: 22000
+            },
+            {
+                name: "개폐형 전류센서 (FS4C)",
+                quantity: 6,
+                price: 52200,
+                amount: 313200,
+                image: "",
+                sourceMall: "devicemart",
+                priceKind: "line-total-derived",
+                sourceLineAmount: 52200
+            }
+        ]));
+    </script>
+    <script src="../app.js"></script>
+    <script>
+        window.addEventListener("DOMContentLoaded", () => {
+            setTimeout(() => {
+                const rows = Array.from(document.querySelectorAll("#table-body tr"));
+                const cells = rows.map((row) => Array.from(row.querySelectorAll("td")).map((cell) => cell.textContent.trim()));
+                const total = document.getElementById("total-price").textContent.trim();
+                const pass = cells.length === 3 &&
+                    cells[0][3] === "18,600" &&
+                    cells[0][4] === "93,000" &&
+                    cells[1][3] === "5,500" &&
+                    cells[1][4] === "22,000" &&
+                    cells[2][3] === "8,700" &&
+                    cells[2][4] === "52,200" &&
+                    total === "167,200원";
+
+                const output = document.getElementById("result");
+                output.dataset.pass = String(pass);
+                output.textContent = JSON.stringify({ pass, cells, total }, null, 2);
+            }, 50);
+        });
+    </script>
+</body>
+</html>

@@ -75,7 +75,10 @@
             const pass = result.length === expected.length &&
                 result.every((item, index) => item.quantity === expected[index].quantity &&
                     item.price === expected[index].price &&
-                    item.amount === expected[index].amount) &&
+                    item.amount === expected[index].amount &&
+                    item.sourceMall === "devicemart" &&
+                    item.priceKind === "line-total-derived" &&
+                    item.sourceLineAmount === expected[index].amount) &&
                 result.reduce((sum, item) => sum + item.amount, 0) === 483500;
 
             const output = document.getElementById("result");

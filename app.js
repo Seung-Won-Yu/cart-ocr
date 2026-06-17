@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const parsedItems = JSON.parse(rawData);
             if (Array.isArray(parsedItems) && parsedItems.length > 0) {
-                currentItems = parsedItems;
+                currentItems = normalizeImportedItems(parsedItems);
                 renderTable();
                 
                 // 로드 완료 후 로컬 스토리지 데이터 청소 (새 창으로 웹 앱을 다시 열 때 중복 로딩 방지)
@@ -193,6 +193,41 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateTotalSum() {
         const total = currentItems.reduce((sum, item) => sum + item.amount, 0);
         totalPriceEl.textContent = formatNumber(total) + '원';
+    }
+
+    function normalizeImportedItems(items) {
+        return items.map((item) => {
+            const quantity = Math.max(parseInteger(item.quantity, 1), 1);
+            let amount = parseInteger(item.amount, 0);
+            let price = parseInteger(item.price, 0);
+
+            if (item.sourceMall === "devicemart" && item.priceKind === "line-total-derived") {
+                amount = parseInteger(item.sourceLineAmount, amount);
+                price = deriveUnitPrice(amount, quantity);
+            } else {
+                if (!amount && price) amount = price * quantity;
+                if (!price && amount) price = deriveUnitPrice(amount, quantity);
+            }
+
+            return {
+                ...item,
+                quantity,
+                price,
+                amount
+            };
+        });
+    }
+
+    function parseInteger(value, fallback = 0) {
+        if (typeof value === "number" && Number.isFinite(value)) return Math.round(value);
+        const parsed = parseInt(String(value || "").replace(/[^0-9-]/g, ""), 10);
+        return Number.isFinite(parsed) ? parsed : fallback;
+    }
+
+    function deriveUnitPrice(amount, quantity) {
+        const qty = parseInteger(quantity, 1) || 1;
+        if (!amount || qty <= 1) return amount || 0;
+        return Math.round(amount / qty);
     }
 
     // Format utility

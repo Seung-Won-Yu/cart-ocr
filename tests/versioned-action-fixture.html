@@ -40,14 +40,15 @@
     <script src="../extension/content.js"></script>
     <script>
         setTimeout(() => {
-            listeners[0]({ action: "scrape_cart_v2" }, null, response => {
+            listeners[0]({ action: "scrape_cart_v3" }, null, response => {
                 const item = response.items && response.items[0];
                 const pass = listeners.length === 1 &&
                     response.success === true &&
                     item &&
                     item.quantity === 5 &&
                     item.price === 84000 &&
-                    item.amount === 420000;
+                    item.amount === 420000 &&
+                    item.priceKind === "line-total-derived";
 
                 const output = document.getElementById("result");
                 output.dataset.pass = String(pass);
