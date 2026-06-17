@@ -208,6 +208,11 @@ async function parseKnownMallCart(debugLog) {
             // 디바이스마트 장바구니의 "상품금액"은 단가가 아니라 수량이 반영된 행 금액입니다.
             const priceEl = row.querySelector(".goods_price, .price, td.price, span.price_value, strong.price, td.price_cell");
             let amount = priceEl ? extractPriceFromText(priceEl.textContent) : 0;
+            if (!amount) {
+                amount = extractLineAmountFromRowCells(cells, {
+                    skipElements: [nameEl]
+                });
+            }
             let price = amount ? deriveUnitPrice(amount, quantity) : 0;
 
             // 2차: 셀렉터 실패 시 → 행 내 모든 <td>를 순회하며 "원" 포함 셀에서 가격 추출
@@ -578,6 +583,25 @@ function extractUnitPriceFromPriceElement(element, quantity) {
     }
 
     return rawPrice;
+}
+
+function extractLineAmountFromRowCells(cells, options = {}) {
+    const skipElements = options.skipElements || [];
+
+    for (const cell of cells) {
+        if (!cell) continue;
+        if (cell.querySelector("input[type='checkbox']")) continue;
+        if (skipElements.some(el => el && cell.contains(el))) continue;
+
+        const text = cell.textContent.trim();
+        if (!/(원|₩)/.test(text)) continue;
+        if (/배송|ship|쿠폰|할인|적립|point/i.test(text)) continue;
+
+        const amount = extractPriceFromText(text);
+        if (amount > 0) return amount;
+    }
+
+    return 0;
 }
 
 function extractUnitPriceFromRowCells(cells, quantity, options = {}) {
