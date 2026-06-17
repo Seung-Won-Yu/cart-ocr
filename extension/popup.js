@@ -71,7 +71,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (response && response.success) {
                 scrapedItems = response.items;
                 if (scrapedItems.length > 0) {
-                    statusDesc.innerHTML = `총 <strong>${scrapedItems.length}개</strong>의 상품 데이터를 성공적으로 긁어왔습니다.`;
+                    const firstItem = scrapedItems[0];
+                    statusDesc.innerHTML = `총 <strong>${scrapedItems.length}개</strong> 수집 완료<br>` +
+                        `첫 항목: 단가 <strong>${formatWon(firstItem.price)}</strong> / 합계 <strong>${formatWon(firstItem.amount)}</strong><br>` +
+                        `화면 반영은 아래 <strong>CartOCR 앱으로 전송</strong>을 눌러주세요.`;
                     sendBtn.disabled = false;
                 } else {
                     statusDesc.textContent = "감지된 장바구니 상품 품목이 없습니다. 장바구니에 담긴 물품이 있는지 확인해 주세요.";
@@ -148,6 +151,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function isMissingContentScriptError(error) {
         return /receiving end does not exist|could not establish connection/i.test(error.message || "");
+    }
+
+    function formatWon(value) {
+        const number = parseInt(value, 10) || 0;
+        return number.toLocaleString("ko-KR") + "원";
     }
 
     function isCoupangCartUrl(url) {

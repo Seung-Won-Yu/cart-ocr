@@ -274,9 +274,113 @@ async function parseKnownMallCart(debugLog) {
             const amount = price * quantity;
             items.push({ name, price, quantity, amount, image });
         }
+
+        if (items.length === 0) {
+            return parseCoupangVisualCart();
+        }
     }
 
     return items;
+}
+
+async function parseCoupangVisualCart() {
+    const items = [];
+    const wrappers = [];
+    const images = Array.from(document.querySelectorAll("img"));
+
+    for (const img of images) {
+        const imageUrl = resolveImageUrl(img);
+        if (!imageUrl) continue;
+
+        const wrapper = findSmallestPricedWrapper(img);
+        if (!wrapper || wrappers.some(existing => existing === wrapper || existing.contains(wrapper))) continue;
+
+        wrappers.push(wrapper);
+    }
+
+    for (const wrapper of wrappers) {
+        const name = extractCoupangName(wrapper);
+        const price = extractCoupangPrice(wrapper);
+        const quantity = extractQuantityFromContainer(wrapper);
+        const imgEl = wrapper.querySelector("img");
+        const imageUrl = resolveImageUrl(imgEl);
+        const image = await convertImageToBase64(imageUrl);
+
+        if (name && price > 0) {
+            items.push({
+                name,
+                price,
+                quantity,
+                amount: price * quantity,
+                image
+            });
+        }
+    }
+
+    return items;
+}
+
+function findSmallestPricedWrapper(startEl) {
+    let el = startEl.parentElement;
+    while (el && el !== document.body) {
+        const text = el.textContent.replace(/\s+/g, " ").trim();
+        if (/(원|₩)/.test(text) && text.length > 20) return el;
+        el = el.parentElement;
+    }
+
+    return null;
+}
+
+function extractCoupangName(container) {
+    const lines = getVisibleTextLines(container);
+    const blocked = /옵션|도착|무료배송|로켓|만족|리뷰|삭제|쿠폰|적용|한달구매|개당|g당|kg당|ml당|배송|할인|^\d+$|^[+\-−]+$/;
+
+    return lines.find(line => line.length >= 4 && !/(원|₩)/.test(line) && !blocked.test(line)) || "";
+}
+
+function extractCoupangPrice(container) {
+    const lines = getVisibleTextLines(container);
+    let price = 0;
+
+    for (const line of lines) {
+        if (!/(원|₩)/.test(line)) continue;
+        if (/개당|g당|kg당|ml당|당\s*[0-9,]+\s*원|쿠폰할인|배송비/.test(line)) continue;
+
+        const matches = line.match(/[0-9,]+\s*(?:원|₩)/g);
+        if (!matches) continue;
+
+        const values = matches
+            .map(match => parseInt(match.replace(/[^0-9]/g, ""), 10))
+            .filter(value => value >= 100);
+
+        if (values.length > 0) price = values[values.length - 1];
+    }
+
+    return price;
+}
+
+function extractQuantityFromContainer(container) {
+    const input = container.querySelector("input[type='number'], input[type='text'], select");
+    if (input) return parseInt(input.value, 10) || 1;
+
+    const text = container.textContent.replace(/\s+/g, " ");
+    const stepperMatch = text.match(/[−-]\s*(\d{1,3})\s*\+/);
+    if (stepperMatch) return parseInt(stepperMatch[1], 10) || 1;
+
+    return 1;
+}
+
+function getVisibleTextLines(container) {
+    const lines = [];
+    const walk = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
+    let node;
+
+    while (node = walk.nextNode()) {
+        const text = node.textContent.replace(/\s+/g, " ").trim();
+        if (text) lines.push(text);
+    }
+
+    return lines;
 }
 
 /**

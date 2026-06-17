@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>CartOCR Coupang fixture</title>
+</head>
+<body>
+    <main>
+        <section>
+            <h1>장바구니(2)</h1>
+            <div>
+                <div>
+                    <button aria-label="선택됨">선택</button>
+                    <img src="https://thumbnail10.coupangcdn.com/thumbnails/remote/492x492ex/image/retail/images/towel.jpg" alt="곰곰 키친 컬러풀 극세사 행주 12개">
+                    <article>
+                        <p>곰곰 키친 컬러풀 극세사 행주 12개</p>
+                        <p>옵션: 30x30cm, 4세트</p>
+                        <p>4.5 | 만족했어요 1천+</p>
+                        <p>내일(목) 도착</p>
+                        <strong>14,710원 🚀 로켓 내일</strong>
+                        <p>(1개당 3,678원)</p>
+                        <p>결제 시 쿠폰 적용됨</p>
+                        <div><button>-</button><span>1</span><button>+</button></div>
+                    </article>
+                </div>
+                <div>
+                    <button aria-label="선택됨">선택</button>
+                    <img src="https://thumbnail10.coupangcdn.com/thumbnails/remote/492x492ex/image/retail/images/gel.jpg" alt="질레트 정품 퓨전 프로글라이드 센서티브 2 in 1 퓨어스포츠 쉐이빙 젤">
+                    <article>
+                        <p>질레트 정품 퓨전 프로글라이드 센서티브 2 in 1 퓨어스포츠 쉐이빙 젤</p>
+                        <p>옵션: 170g, 4개</p>
+                        <p>한달구매 1천+</p>
+                        <p>내일(목) 도착</p>
+                        <p><del>27,200원</del></p>
+                        <strong>30% 18,990원 🚀 로켓 내일</strong>
+                        <p>(10g당 279원)</p>
+                        <p>결제 시 쿠폰 적용됨</p>
+                        <div><button>-</button><span>1</span><button>+</button></div>
+                    </article>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <pre id="result">pending</pre>
+
+    <script>
+        window.chrome = {
+            runtime: {
+                lastError: null,
+                onMessage: {
+                    addListener() {}
+                },
+                sendMessage(request, callback) {
+                    callback({ success: true, data: `image:${request.url}` });
+                }
+            }
+        };
+    </script>
+    <script src="../extension/content.js"></script>
+    <script>
+        setTimeout(async () => {
+            const result = await scrapeCurrentCart();
+            const expected = [
+                { name: "곰곰 키친 컬러풀 극세사 행주 12개", quantity: 1, price: 14710, amount: 14710 },
+                { name: "질레트 정품 퓨전 프로글라이드 센서티브 2 in 1 퓨어스포츠 쉐이빙 젤", quantity: 1, price: 18990, amount: 18990 }
+            ];
+            const pass = result.length === expected.length &&
+                result.every((item, index) => item.name === expected[index].name &&
+                    item.quantity === expected[index].quantity &&
+                    item.price === expected[index].price &&
+                    item.amount === expected[index].amount);
+
+            const output = document.getElementById("result");
+            output.dataset.pass = String(pass);
+            output.textContent = JSON.stringify({ pass, result }, null, 2);
+        }, 0);
+    </script>
+</body>
+</html>
