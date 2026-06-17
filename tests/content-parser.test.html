@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <title>CartOCR content parser tests</title>
+</head>
+<body>
+    <main id="fixture"></main>
+    <pre id="result">running</pre>
+
+    <script>
+        window.chrome = {
+            runtime: {
+                lastError: null,
+                onMessage: {
+                    addListener() {}
+                },
+                sendMessage(request, callback) {
+                    callback({ success: true, data: request.url || "" });
+                }
+            }
+        };
+    </script>
+    <script src="../extension/content.js"></script>
+    <script>
+        const fixtureEl = document.getElementById("fixture");
+        const resultEl = document.getElementById("result");
+        const fixture = new URLSearchParams(window.location.search).get("fixture");
+
+        const fixtures = {
+            devicemart: `
+                <table class="cart_table_style" id="cart-table">
+                    <caption>주문상품</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col"></th>
+                            <th scope="col">주문상품</th>
+                            <th scope="col">수량</th>
+                            <th scope="col">상품금액</th>
+                            <th scope="col">적립</th>
+                            <th scope="col">납기</th>
+                            <th scope="col">선택</th>
+                            <th scope="col">배송비</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cart_tbody">
+                        <tr name="cart_list">
+                            <td><input type="checkbox" name="cart_option_seq[]" checked></td>
+                            <td class="cell_goods">
+                                <a href="/goods/view?no=15584809">Raspberry Pi Pico WH 945-14070-0080-00</a>
+                                <img src="/data/goods/1/2024/06/pico_wh.jpg" alt="상품 이미지">
+                            </td>
+                            <td class="cell_qty">
+                                <input type="text" name="optionEa[]" value="3">
+                            </td>
+                            <td class="price_area">
+                                <strong>29,700원</strong>
+                            </td>
+                            <td>297원</td>
+                            <td>당일</td>
+                            <td><button type="button">삭제</button></td>
+                            <td>3,000원</td>
+                        </tr>
+                    </tbody>
+                </table>
+            `,
+            coupang: `
+                <div class="cart-deal-item">
+                    <div class="cart-deal-item__image">
+                        <img class="product-image" src="https://image6.coupangcdn.com/image/vendor_inventory/abc/product.jpg" alt="상품">
+                    </div>
+                    <a class="cart-deal-item__product-name" href="/vp/products/123">탐사수 무라벨 2L 12개</a>
+                    <select class="quantity-select">
+                        <option value="1">1</option>
+                        <option value="2" selected>2</option>
+                    </select>
+                    <span class="unit-price">6,980원</span>
+                </div>
+            `
+        };
+
+        const expectations = {
+            devicemart: {
+                name: "Raspberry Pi Pico WH 945-14070-0080-00",
+                quantity: 3,
+                price: 9900,
+                amount: 29700,
+                image: "http://www.devicemart.co.kr"
+            },
+            coupang: {
+                name: "탐사수 무라벨 2L 12개",
+                quantity: 2,
+                price: 6980,
+                amount: 13960,
+                image: "https://image6.coupangcdn.com/image/vendor_inventory/abc/product.jpg"
+            }
+        };
+
+        function assertEqual(actual, expected, label) {
+            if (actual !== expected) {
+                throw new Error(`${label}: expected ${expected}, got ${actual}`);
+            }
+        }
+
+        async function run() {
+            if (!fixtures[fixture]) {
+                throw new Error(`Unknown fixture: ${fixture}`);
+            }
+
+            fixtureEl.innerHTML = fixtures[fixture];
+            const items = await scrapeCurrentCart();
+            const expected = expectations[fixture];
+
+            assertEqual(items.length, 1, `${fixture} item count`);
+            assertEqual(items[0].name, expected.name, `${fixture} name`);
+            assertEqual(items[0].quantity, expected.quantity, `${fixture} quantity`);
+            assertEqual(items[0].price, expected.price, `${fixture} unit price`);
+            assertEqual(items[0].amount, expected.amount, `${fixture} amount`);
+            if (!items[0].image.startsWith(expected.image)) {
+                throw new Error(`${fixture} image: expected prefix ${expected.image}, got ${items[0].image}`);
+            }
+
+            return { fixture, items };
+        }
+
+        run()
+            .then(payload => {
+                resultEl.textContent = JSON.stringify({ ok: true, ...payload }, null, 2);
+            })
+            .catch(error => {
+                resultEl.textContent = JSON.stringify({ ok: false, fixture, error: error.message }, null, 2);
+            });
+    </script>
+</body>
+</html>

@@ -213,7 +213,7 @@ async function parseKnownMallCart(debugLog) {
             let name = nameEl.textContent.replace(/[\n\t]/g, "").trim();
             if (name.includes("삭제") || name.includes("변경") || name.length < 2) continue;
 
-            const qtyInput = row.querySelector("input[name*='goodsCnt'], input[name*='qty'], input[id*='cnt'], .qty_input, input[type='number']");
+            const qtyInput = row.querySelector("input[name*='goodsCnt'], input[name*='optionEa'], input[name*='quantity'], input[name*='qty'], input[id*='cnt'], input[id*='quantity'], input[id*='qty'], .qty_input, input[type='number']");
             let quantity = 1;
             if (qtyInput) {
                 quantity = parseInt(qtyInput.value, 10) || 1;
@@ -277,19 +277,19 @@ async function parseKnownMallCart(debugLog) {
             }
         }
     } else if (url.includes("coupang.com")) {
-        const dealRows = document.querySelectorAll(".cart-deal-item");
+        const dealRows = document.querySelectorAll(".cart-deal-item, [class*='cart-deal-item'], [data-cart-item-id]");
         for (const row of dealRows) {
-            const nameEl = row.querySelector(".product-name, .item-title");
+            const nameEl = row.querySelector(".product-name, [class*='product-name'], [class*='ProductName'], .item-title, a[href*='/vp/products']");
             if (!nameEl) continue;
             const name = nameEl.textContent.replace(/[\n\t]/g, "").trim();
 
-            const qtyInput = row.querySelector(".quantity-select, .quantity-input, input[name='quantity']");
+            const qtyInput = row.querySelector(".quantity-select, [class*='quantity-select'], .quantity-input, [class*='quantity-input'], input[name='quantity'], select[name='quantity']");
             let quantity = qtyInput ? (parseInt(qtyInput.value, 10) || 1) : 1;
 
-            const priceEl = row.querySelector(".unit-price, .discount-price, .price-area .price");
+            const priceEl = row.querySelector(".unit-price, [class*='unit-price'], .discount-price, [class*='discount-price'], .price-area .price, [class*='price']");
             let price = priceEl ? extractPriceFromText(priceEl.textContent) : 0;
 
-            const imgEl = row.querySelector("img.product-img, .cart-deal-item__img img");
+            const imgEl = row.querySelector("img.product-img, .cart-deal-item__img img, .cart-deal-item__image img, img[class*='product'], img");
             const imageUrl = resolveImageUrl(imgEl);
             const image = await convertImageToBase64(imageUrl);
 
