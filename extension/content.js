@@ -31,6 +31,10 @@ async function scrapeCurrentCart() {
     let items = [];
     const debugLog = [];
 
+    if (isKnownEmptyCartPage()) {
+        return [];
+    }
+
     // 1단계: 쇼핑몰 솔루션별 맞춤형 하드코딩 파서 우선 작동 (고도몰, Cafe24 등)
     try {
         items = await parseKnownMallCart(debugLog);
@@ -79,6 +83,11 @@ async function scrapeCurrentCart() {
     const totalDivs = document.querySelectorAll('div').length;
     const errMsg = `장바구니 품목을 찾지 못했습니다.\n[시스템 진단]: 테이블 ${totalTables}개 / 디브 ${totalDivs}개 감지.\n[실패 로그]: ${debugLog.join(' -> ')}`;
     throw new Error(errMsg);
+}
+
+function isKnownEmptyCartPage() {
+    const text = document.body ? document.body.textContent : "";
+    return /장바구니에\s*담긴\s*상품이\s*없습니다|장바구니가\s*비어|장바구니가\s*비었습니다/.test(text);
 }
 
 /**
@@ -190,6 +199,10 @@ async function parseKnownMallCart(debugLog) {
     const url = window.location.href;
 
     if (url.includes("devicemart.co.kr")) {
+        if (/장바구니에\s*담긴\s*상품이\s*없습니다|장바구니가\s*비어/.test(document.body.textContent)) {
+            return [];
+        }
+
         const rows = document.querySelectorAll("table tr, .order_table_type tbody tr, #cart_table tbody tr, .tbl_cart_list tbody tr");
         if (rows.length === 0) throw new Error("행 후보 없음");
         
@@ -293,7 +306,8 @@ async function parseCoupangVisualCart() {
         if (!imageUrl) continue;
 
         const wrapper = findSmallestPricedWrapper(img);
-        if (!wrapper || wrappers.some(existing => existing === wrapper || existing.contains(wrapper))) continue;
+        if (!wrapper || wrappers.some(existing => existing === wrapper || existing.contains(wrapper) || wrapper.contains(existing))) continue;
+        if (!hasCartQuantityControl(wrapper)) continue;
 
         wrappers.push(wrapper);
     }
@@ -324,11 +338,18 @@ function findSmallestPricedWrapper(startEl) {
     let el = startEl.parentElement;
     while (el && el !== document.body) {
         const text = el.textContent.replace(/\s+/g, " ").trim();
-        if (/(원|₩)/.test(text) && text.length > 20) return el;
+        if (/(원|₩)/.test(text) && hasCartQuantityControl(el) && text.length > 20 && text.length <= 900) return el;
         el = el.parentElement;
     }
 
     return null;
+}
+
+function hasCartQuantityControl(container) {
+    if (container.querySelector("input[type='number'], input[type='text'], select")) return true;
+
+    const text = container.textContent.replace(/\s+/g, " ");
+    return /[−-]\s*\d{1,3}\s*\+/.test(text);
 }
 
 function extractCoupangName(container) {

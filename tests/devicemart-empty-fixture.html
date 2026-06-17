@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>CartOCR DeviceMart empty fixture</title>
+</head>
+<body>
+    <h1>장바구니</h1>
+    <table>
+        <tbody>
+            <tr>
+                <td>장바구니에 담긴 상품이 없습니다.</td>
+            </tr>
+        </tbody>
+    </table>
+    <aside>
+        <img src="https://www.devicemart.co.kr/goods_img/recent.jpg" alt="최근본상품">
+        <span>최근본상품 6</span>
+    </aside>
+
+    <pre id="result">pending</pre>
+
+    <script>
+        window.chrome = {
+            runtime: {
+                lastError: null,
+                onMessage: {
+                    addListener() {}
+                },
+                sendMessage(request, callback) {
+                    callback({ success: true, data: `image:${request.url}` });
+                }
+            }
+        };
+    </script>
+    <script src="../extension/content.js"></script>
+    <script>
+        (async () => {
+            const result = await scrapeCurrentCart();
+            const pass = Array.isArray(result) && result.length === 0;
+            const output = document.getElementById("result");
+            output.dataset.pass = String(pass);
+            output.textContent = JSON.stringify({ pass, result }, null, 2);
+        })();
+    </script>
+</body>
+</html>
