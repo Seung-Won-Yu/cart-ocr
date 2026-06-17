@@ -9,6 +9,7 @@
   ],
   "host_permissions": [
     "https://*.coupang.com/*",
+    "https://*.coupangcdn.com/*",
     "https://*.devicemart.co.kr/*",
     "http://*.devicemart.co.kr/*",
     "https://*.eleparts.co.kr/*",

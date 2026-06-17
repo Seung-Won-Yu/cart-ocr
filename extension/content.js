@@ -3,19 +3,23 @@
  * 핫링크 회피, CORS 우회 및 상품 이미지 저장소 Whitelist 매칭 로직이 탑재된 최종 V6 스크래퍼
  */
 
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === "scrape_cart") {
-        scrapeCurrentCart()
-            .then(result => {
-                sendResponse({ success: true, items: result });
-            })
-            .catch(error => {
-                console.error("CartOCR 파싱 중 오류:", error);
-                sendResponse({ success: false, error: error.message });
-            });
-    }
-    return true; // 비동기 응답 필수
-});
+if (!window.__cartOcrMessageListenerRegistered) {
+    window.__cartOcrMessageListenerRegistered = true;
+
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+        if (request.action === "scrape_cart") {
+            scrapeCurrentCart()
+                .then(result => {
+                    sendResponse({ success: true, items: result });
+                })
+                .catch(error => {
+                    console.error("CartOCR 파싱 중 오류:", error);
+                    sendResponse({ success: false, error: error.message });
+                });
+        }
+        return true; // 비동기 응답 필수
+    });
+}
 
 async function scrapeCurrentCart() {
     let items = [];
@@ -84,40 +88,24 @@ function resolveImageUrl(imgEl) {
     for (let i = 0; i < attrs.length; i++) {
         const attrName = attrs[i].name;
         const attrVal = attrs[i].value.trim();
-        
-        // base64 더미 인코딩 이미지 배제
-        if (attrVal.startsWith("data:image")) continue;
-        
-        // [핵심 필터]: 실제 쇼핑몰의 '상품 이미지 저장 경로' 형식을 가진 주소만 통과시킵니다.
-        // 이로써 체크박스, 삭제버튼, 닫기아이콘 등은 무조건 걸러집니다.
-        const isProductImagePath = attrVal.includes("/goods/") || 
-                                   attrVal.includes("/prod/") || 
-                                   attrVal.includes("/product/") || 
-                                   attrVal.includes("/shop/data/") ||
-                                   attrVal.includes("/goods_img/") ||
-                                   attrVal.includes("/item/");
-                                   
-        if (isProductImagePath) {
+
+        for (const candidate of extractImageCandidates(attrVal)) {
+            if (!looksLikeProductImageUrl(candidate)) continue;
             if (attrName === "src") {
-                if (!rawSrc) rawSrc = attrVal;
+                if (!rawSrc) rawSrc = candidate;
             } else {
-                rawSrc = attrVal;
+                rawSrc = candidate;
                 break; // LazyLoad 전용 속성 우선 매칭
             }
         }
+
+        if (rawSrc && attrName !== "src") break;
     }
     
     // 루프를 돌고도 못 찾았다면 최종 수단으로 브라우저가 평가한 imgEl.src 사용 (Whitelist 체크)
     if (!rawSrc) {
         const fallbackSrc = imgEl.src;
-        if (
-            fallbackSrc.includes("/goods/") || 
-            fallbackSrc.includes("/prod/") || 
-            fallbackSrc.includes("/product/") || 
-            fallbackSrc.includes("/shop/data/") ||
-            fallbackSrc.includes("/goods_img/") ||
-            fallbackSrc.includes("/item/")
-        ) {
+        if (looksLikeProductImageUrl(fallbackSrc)) {
             rawSrc = fallbackSrc;
         }
     }
@@ -134,6 +122,37 @@ function resolveImageUrl(imgEl) {
         }
         return cleanSrc;
     }
+}
+
+function extractImageCandidates(value) {
+    if (!value || value.startsWith("data:image")) return [];
+    return value
+        .split(",")
+        .map(part => part.trim().split(/\s+/)[0])
+        .filter(Boolean)
+        .filter(part => !part.startsWith("data:image"));
+}
+
+function looksLikeProductImageUrl(url) {
+    if (!url || typeof url !== "string") return false;
+
+    const lower = url.toLowerCase();
+    if (lower.startsWith("data:image")) return false;
+    if (/sprite|icon|btn|button|checkbox|blank|spacer|logo|loading|arrow|delete|close/.test(lower)) return false;
+
+    const hasProductPath = lower.includes("/goods/") ||
+                           lower.includes("/prod/") ||
+                           lower.includes("/product/") ||
+                           lower.includes("/shop/data/") ||
+                           lower.includes("/goods_img/") ||
+                           lower.includes("/item/") ||
+                           lower.includes("/vendor_inventory/") ||
+                           lower.includes("/thumbnails/");
+
+    const hasImageExtension = /\.(jpe?g|png|webp|gif)(?:\?|#|$)/i.test(lower);
+    const hasKnownImageHost = /coupangcdn\.com|devicemart\.co\.kr|eleparts\.co\.kr/i.test(lower);
+
+    return hasProductPath || (hasImageExtension && hasKnownImageHost);
 }
 
 /**
@@ -184,26 +203,21 @@ async function parseKnownMallCart(debugLog) {
                 if (qtyCell) quantity = parseInt(qtyCell.textContent.replace(/[^0-9]/g, ""), 10) || 1;
             }
 
+            const cells = row.querySelectorAll("td");
+
             // 1차: CSS 클래스 기반 가격 셀렉터
             const priceEl = row.querySelector(".goods_price, .price, td.price, span.price_value, strong.price, td.price_cell");
-            let price = priceEl ? extractPriceFromText(priceEl.textContent) : 0;
+            let price = priceEl ? extractUnitPriceFromPriceElement(priceEl, quantity) : 0;
 
             // 2차: 셀렉터 실패 시 → 행 내 모든 <td>를 순회하며 "원" 포함 셀에서 가격 추출
             if (price === 0) {
-                const allCells = row.querySelectorAll("td");
-                for (const cell of allCells) {
-                    if (cell.contains(nameEl)) continue;
-                    if (cell.querySelector("input[type='checkbox']")) continue;
-                    const ct = cell.textContent.trim();
-                    if (ct.includes("원") && /[0-9]/.test(ct)) {
-                        const extracted = extractPriceFromText(ct);
-                        if (extracted > price) price = extracted;
-                    }
-                }
+                price = extractUnitPriceFromRowCells(cells, quantity, {
+                    skipElements: [nameEl],
+                    qtyIndexes: []
+                });
             }
 
             // 첫 번째 td(보통 체크박스)는 건너뛰고 이미지 찾기
-            const cells = row.querySelectorAll("td");
             let imgEl = null;
             for (let i = 1; i < cells.length; i++) {
                 imgEl = cells[i].querySelector("img");
@@ -261,7 +275,7 @@ async function parseGenericTableCart(debugLog) {
     if (tables.length === 0) throw new Error("테이블 없음");
     
     let targetTable = null;
-    let nameIdx = -1, qtyIdx = -1, priceIdx = -1, imgIdx = -1;
+    let nameIdx = -1, qtyIdx = -1, priceIdx = -1, amountIdx = -1, imgIdx = -1;
 
     for (const table of tables) {
         const headers = table.querySelectorAll("th, td");
@@ -294,14 +308,14 @@ async function parseGenericTableCart(debugLog) {
         const text = cell.textContent.replace(/\s+/g, "").trim();
         if (/상품|품명|품목|명칭|subject|product|item/i.test(text) && nameIdx === -1) nameIdx = idx;
         if (/수량|qty|quantity|ea/i.test(text) && !/금액|합계/i.test(text) && qtyIdx === -1) qtyIdx = idx;
-        if (/단가|가격|상품금액|판매가|price/i.test(text) && priceIdx === -1) priceIdx = idx;
-        if (priceIdx === -1 && /금액|합계|amount|total/i.test(text)) priceIdx = idx;
+        if (isUnitPriceHeader(text) && priceIdx === -1) priceIdx = idx;
+        if (isAmountHeader(text) && amountIdx === -1) amountIdx = idx;
         if (/이미지|사진|image|thumb/i.test(text) && imgIdx === -1) imgIdx = idx;
     });
 
     if (nameIdx === -1) nameIdx = 1;
     if (qtyIdx === -1) qtyIdx = 2;
-    if (priceIdx === -1) priceIdx = 3;
+    if (priceIdx === -1 && amountIdx === -1) priceIdx = 3;
 
     const items = [];
     const rows = targetTable.querySelectorAll("tbody tr, tr");
@@ -312,7 +326,7 @@ async function parseGenericTableCart(debugLog) {
         }
 
         const cells = row.querySelectorAll("td");
-        if (cells.length <= Math.max(nameIdx, qtyIdx, priceIdx)) continue;
+        if (cells.length <= Math.max(nameIdx, qtyIdx, priceIdx, amountIdx)) continue;
 
         try {
             const nameCell = cells[nameIdx];
@@ -325,19 +339,21 @@ async function parseGenericTableCart(debugLog) {
             const qtyInput = qtyCell.querySelector("input, select");
             let quantity = qtyInput ? (parseInt(qtyInput.value, 10) || 1) : (parseInt(qtyCell.textContent.replace(/[^0-9]/g, ""), 10) || 1);
 
-            const priceCell = cells[priceIdx];
-            let price = priceCell ? extractPriceFromText(priceCell.textContent) : 0;
+            const priceCell = priceIdx !== -1 ? cells[priceIdx] : null;
+            const amountCell = amountIdx !== -1 ? cells[amountIdx] : null;
+            let price = priceCell ? extractUnitPriceFromPriceElement(priceCell, quantity) : 0;
+
+            if (price === 0 && amountCell) {
+                const totalAmount = extractPriceFromText(amountCell.textContent);
+                price = deriveUnitPrice(totalAmount, quantity);
+            }
 
             // 매핑된 컬럼에서 가격 추출 실패 시 → 행 내 "원" 포함 셀 스캔
             if (price === 0) {
-                for (let ci = 0; ci < cells.length; ci++) {
-                    if (ci === nameIdx || ci === qtyIdx) continue;
-                    const ct = cells[ci].textContent.trim();
-                    if (ct.includes("원") && /[0-9]/.test(ct)) {
-                        const extracted = extractPriceFromText(ct);
-                        if (extracted > price) price = extracted;
-                    }
-                }
+                price = extractUnitPriceFromRowCells(cells, quantity, {
+                    skipElements: [nameCell],
+                    qtyIndexes: [qtyIdx]
+                });
             }
 
             let imgEl = null;
@@ -358,7 +374,7 @@ async function parseGenericTableCart(debugLog) {
             const imageUrl = resolveImageUrl(imgEl);
             const image = await convertImageToBase64(imageUrl);
 
-            const amount = price * quantity;
+            const amount = amountCell ? extractPriceFromText(amountCell.textContent) || price * quantity : price * quantity;
             if (name && price > 0) {
                 items.push({ name, price, quantity, amount, image });
             }
@@ -547,4 +563,85 @@ function extractPriceFromText(text) {
     
     // 4. 최후의 보루
     return parseInt(text.replace(/[^0-9]/g, ""), 10) || 0;
+}
+
+function extractUnitPriceFromPriceElement(element, quantity) {
+    if (!element) return 0;
+
+    const rawPrice = extractPriceFromText(element.textContent);
+    if (!rawPrice) return 0;
+
+    const label = getElementLabel(element);
+    if (isAmountText(label) && !isUnitPriceText(label)) {
+        return deriveUnitPrice(rawPrice, quantity);
+    }
+
+    return rawPrice;
+}
+
+function extractUnitPriceFromRowCells(cells, quantity, options = {}) {
+    const skipElements = options.skipElements || [];
+    const qtyIndexes = options.qtyIndexes || [];
+    const candidates = [];
+
+    cells.forEach((cell, index) => {
+        if (!cell || qtyIndexes.includes(index)) return;
+        if (cell.querySelector("input[type='checkbox']")) return;
+        if (skipElements.some(el => el && cell.contains(el))) return;
+
+        const text = cell.textContent.trim();
+        if (!/[0-9]/.test(text)) return;
+        if (/배송|ship|쿠폰|할인|적립|point/i.test(text)) return;
+
+        const rawPrice = extractPriceFromText(text);
+        if (!rawPrice) return;
+
+        const label = getElementLabel(cell);
+        const isAmount = isAmountText(label) && !isUnitPriceText(label);
+        const unitPrice = isAmount ? deriveUnitPrice(rawPrice, quantity) : rawPrice;
+
+        candidates.push({
+            unitPrice,
+            isExplicitUnit: isUnitPriceText(label),
+            isAmount
+        });
+    });
+
+    const explicitUnit = candidates.find(candidate => candidate.isExplicitUnit && candidate.unitPrice > 0);
+    if (explicitUnit) return explicitUnit.unitPrice;
+
+    const nonAmount = candidates.filter(candidate => !candidate.isAmount && candidate.unitPrice > 0);
+    if (nonAmount.length > 0) {
+        return nonAmount[0].unitPrice;
+    }
+
+    const amountBased = candidates.find(candidate => candidate.isAmount && candidate.unitPrice > 0);
+    return amountBased ? amountBased.unitPrice : 0;
+}
+
+function deriveUnitPrice(amount, quantity) {
+    if (!amount) return 0;
+    const qty = parseInt(quantity, 10) || 1;
+    if (qty <= 1) return amount;
+    return Math.round(amount / qty);
+}
+
+function getElementLabel(element) {
+    return `${element.textContent || ""} ${element.className || ""} ${element.id || ""}`.replace(/\s+/g, " ").trim();
+}
+
+function isUnitPriceHeader(text) {
+    return isUnitPriceText(text) && !/합계|총|주문금액|결제금액|소계|amount|total|subtotal|sum/i.test(text || "");
+}
+
+function isAmountHeader(text) {
+    return /금액|합계|총액|소계|amount|total|subtotal|sum/i.test(text) && !isUnitPriceHeader(text);
+}
+
+function isUnitPriceText(text) {
+    return /단가|판매가|가격|상품금액|price|unit|cost|goods_price|price_value|price_cell/i.test(text || "");
+}
+
+function isAmountText(text) {
+    return /금액|합계|총|주문금액|결제금액|amount|total|subtotal|sum/i.test(text || "");
 }

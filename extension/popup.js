@@ -56,20 +56,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // [장바구니 상품 수집] 버튼 클릭 핸들러
-    scrapeBtn.addEventListener('click', () => {
+    scrapeBtn.addEventListener('click', async () => {
         if (!activeTab) return;
 
         scrapeBtn.disabled = true;
         statusDesc.textContent = "웹페이지 구조(DOM) 파싱 및 이미지 Base64 인코딩 중...";
 
-        chrome.tabs.sendMessage(activeTab.id, { action: "scrape_cart" }, (response) => {
+        try {
+            const response = await requestCartScrape(activeTab.id);
             scrapeBtn.disabled = false;
-            
-            if (chrome.runtime.lastError) {
-                console.error(chrome.runtime.lastError);
-                statusDesc.textContent = "페이지에 익스텐션 스크립트가 주입되지 않았습니다. 새로고침 후 시도해 주세요.";
-                return;
-            }
 
             if (response && response.success) {
                 scrapedItems = response.items;
@@ -82,7 +77,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else {
                 statusDesc.textContent = "수집 실패: " + (response ? response.error : "알 수 없는 에러");
             }
-        });
+        } catch (error) {
+            console.error(error);
+            scrapeBtn.disabled = false;
+            statusDesc.textContent = "수집 실패: " + error.message;
+        }
     });
 
     // [CartOCR 앱으로 전송] 버튼 클릭 핸들러
@@ -113,4 +112,38 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
     });
+
+    async function requestCartScrape(tabId) {
+        try {
+            return await sendScrapeMessage(tabId);
+        } catch (error) {
+            if (!isMissingContentScriptError(error)) throw error;
+
+            statusDesc.textContent = "수집 스크립트 연결 중...";
+            await chrome.scripting.executeScript({
+                target: { tabId },
+                files: ["content.js"]
+            });
+
+            return sendScrapeMessage(tabId);
+        }
+    }
+
+    function sendScrapeMessage(tabId) {
+        return new Promise((resolve, reject) => {
+            chrome.tabs.sendMessage(tabId, { action: "scrape_cart" }, (response) => {
+                const runtimeError = chrome.runtime.lastError;
+                if (runtimeError) {
+                    reject(new Error(runtimeError.message));
+                    return;
+                }
+
+                resolve(response);
+            });
+        });
+    }
+
+    function isMissingContentScriptError(error) {
+        return /receiving end does not exist|could not establish connection/i.test(error.message || "");
+    }
 });

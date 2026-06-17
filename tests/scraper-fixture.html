@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>CartOCR scraper fixture</title>
+</head>
+<body>
+    <table>
+        <thead>
+            <tr>
+                <th>이미지</th>
+                <th>품명</th>
+                <th>수량</th>
+                <th>금액</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>
+                    <img src="https://thumbnail1.coupangcdn.com/thumbnails/remote/80x80ex/image/vendor_inventory/sample.jpg" alt="상품">
+                </td>
+                <td><a href="/items/1">테스트 부품 945-14070-0080-00</a></td>
+                <td><input name="qty" value="3"></td>
+                <td class="total">36,000원</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <pre id="result">pending</pre>
+
+    <script>
+        window.chrome = {
+            runtime: {
+                lastError: null,
+                onMessage: {
+                    addListener() {}
+                },
+                sendMessage(request, callback) {
+                    callback({ success: true, data: `image:${request.url}` });
+                }
+            }
+        };
+    </script>
+    <script src="../extension/content.js"></script>
+    <script>
+        setTimeout(async () => {
+            const result = await scrapeCurrentCart();
+            const pass = result.length === 1 &&
+                result[0].name === "테스트 부품 945-14070-0080-00" &&
+                result[0].quantity === 3 &&
+                result[0].price === 12000 &&
+                result[0].amount === 36000 &&
+                result[0].image.includes("thumbnail1.coupangcdn.com");
+
+            const output = document.getElementById("result");
+            output.dataset.pass = String(pass);
+            output.textContent = JSON.stringify({ pass, result }, null, 2);
+        }, 0);
+    </script>
+</body>
+</html>
