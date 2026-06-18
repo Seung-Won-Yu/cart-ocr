@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CartOCR - 구매신청서 자동 문서화 도구</title>
-    <link rel="stylesheet" href="style.css?v=1.5">
+    <link rel="stylesheet" href="style.css?v=1.6">
     <!-- Google Fonts & Icon -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,7 +18,7 @@
             <div class="logo">
                 <span class="material-symbols-rounded logo-icon">shopping_cart_checkout</span>
                 <h1>CartOCR</h1>
-                <span class="badge">v1.5 (익스텐션 전용)</span>
+                <span class="badge">v1.6 (익스텐션 전용)</span>
             </div>
             <div class="header-actions">
                 <button id="theme-toggle" class="btn-icon" title="테마 변경">
@@ -123,24 +123,52 @@
     <!-- 인쇄용 히든 결재 문서 레이아웃 -->
     <div id="print-layout" class="print-only">
         <div class="print-header">
+            <div class="print-doc-meta">
+                <span id="print-document-no">문서번호: -</span>
+                <span id="print-generated-at">작성일시: -</span>
+            </div>
             <h1>구 매 신 청 서</h1>
-            <div class="print-meta">
+            <div class="print-approval">
                 <table>
                     <tr>
-                        <th>신청부서</th>
-                        <td>하드웨어팀</td>
-                        <th>신 청 자</th>
-                        <td>(인)</td>
+                        <th>신 청</th>
+                        <th>검 토</th>
+                        <th>승 인</th>
                     </tr>
                     <tr>
-                        <th>신청일자</th>
-                        <td id="print-date">2026-06-17</td>
-                        <th>결 재 자</th>
-                        <td>대표이사 (인)</td>
+                        <td>(인)</td>
+                        <td>(인)</td>
+                        <td>(인)</td>
                     </tr>
                 </table>
             </div>
         </div>
+        <table class="print-info-table">
+            <tbody>
+                <tr>
+                    <th>신청부서</th>
+                    <td>하드웨어팀</td>
+                    <th>신청자</th>
+                    <td></td>
+                    <th>신청일자</th>
+                    <td id="print-date">2026-06-17</td>
+                </tr>
+                <tr>
+                    <th>구매처</th>
+                    <td>디바이스마트</td>
+                    <th>결제방법</th>
+                    <td>법인카드 / 계좌이체</td>
+                    <th>품목수</th>
+                    <td id="print-item-count">0건</td>
+                </tr>
+                <tr>
+                    <th>구매목적</th>
+                    <td colspan="5">프로젝트 수행 및 개발 업무에 필요한 부품/장비 구매</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="print-section-title">구매 요청 품목</div>
         <table class="print-table">
             <colgroup>
                 <col class="print-col-no">
@@ -182,11 +210,29 @@
                 </tr>
             </tfoot>
         </table>
+
+        <table class="print-note-table">
+            <tbody>
+                <tr>
+                    <th>구매 사유</th>
+                    <td>상기 품목은 개발 및 테스트 업무 수행에 필요한 자재로 구매를 요청합니다.</td>
+                </tr>
+                <tr>
+                    <th>비고</th>
+                    <td>견적 및 장바구니 내역 확인 후 결재 진행 바랍니다.</td>
+                </tr>
+            </tbody>
+        </table>
+
         <div class="print-footer">
-            <p>위와 같이 물품 구매를 신청하오니 결재하여 주시기 바랍니다.</p>
+            <p>위와 같이 물품 구매를 신청하오니 검토 후 결재하여 주시기 바랍니다.</p>
+            <div class="print-sign-row">
+                <span id="print-request-date-text">2026년 6월 17일</span>
+                <span>신청자: ____________________ (인)</span>
+            </div>
         </div>
     </div>
 
-    <script src="app.js?v=1.5"></script>
+    <script src="app.js?v=1.6"></script>
 </body>
 </html>

@@ -35,6 +35,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const printShippingPriceEl = document.getElementById('print-shipping-price');
     const printTotalPriceEl = document.getElementById('print-total-price');
     const printDateEl = document.getElementById('print-date');
+    const printDocumentNoEl = document.getElementById('print-document-no');
+    const printGeneratedAtEl = document.getElementById('print-generated-at');
+    const printItemCountEl = document.getElementById('print-item-count');
+    const printRequestDateTextEl = document.getElementById('print-request-date-text');
 
     // Init Theme
     if (localStorage.getItem('theme') === 'dark') {
@@ -401,7 +405,17 @@ document.addEventListener('DOMContentLoaded', () => {
         // 오늘 날짜 세팅
         const today = new Date();
         const formattedDate = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일`;
+        const compactDate = [
+            today.getFullYear(),
+            String(today.getMonth() + 1).padStart(2, '0'),
+            String(today.getDate()).padStart(2, '0')
+        ].join('');
+        const formattedDateTime = `${formattedDate} ${String(today.getHours()).padStart(2, '0')}:${String(today.getMinutes()).padStart(2, '0')}`;
         printDateEl.textContent = formattedDate;
+        if (printDocumentNoEl) printDocumentNoEl.textContent = `문서번호: PO-${compactDate}-${String(currentItems.length).padStart(2, '0')}`;
+        if (printGeneratedAtEl) printGeneratedAtEl.textContent = `작성일시: ${formattedDateTime}`;
+        if (printItemCountEl) printItemCountEl.textContent = `${currentItems.length}건`;
+        if (printRequestDateTextEl) printRequestDateTextEl.textContent = formattedDate;
 
         // 인쇄 테이블 렌더링
         printTableBody.innerHTML = '';

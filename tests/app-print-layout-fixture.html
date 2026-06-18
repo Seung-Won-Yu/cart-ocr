@@ -27,24 +27,52 @@
 
     <div id="print-layout" class="print-only">
         <div class="print-header">
+            <div class="print-doc-meta">
+                <span id="print-document-no">문서번호: -</span>
+                <span id="print-generated-at">작성일시: -</span>
+            </div>
             <h1>구 매 신 청 서</h1>
-            <div class="print-meta">
+            <div class="print-approval">
                 <table>
                     <tr>
-                        <th>신청부서</th>
-                        <td>하드웨어팀</td>
-                        <th>신 청 자</th>
-                        <td>(인)</td>
+                        <th>신 청</th>
+                        <th>검 토</th>
+                        <th>승 인</th>
                     </tr>
                     <tr>
-                        <th>신청일자</th>
-                        <td id="print-date">2026-06-18</td>
-                        <th>결 재 자</th>
-                        <td>대표이사 (인)</td>
+                        <td>(인)</td>
+                        <td>(인)</td>
+                        <td>(인)</td>
                     </tr>
                 </table>
             </div>
         </div>
+        <table class="print-info-table">
+            <tbody>
+                <tr>
+                    <th>신청부서</th>
+                    <td>하드웨어팀</td>
+                    <th>신청자</th>
+                    <td></td>
+                    <th>신청일자</th>
+                    <td id="print-date">2026-06-18</td>
+                </tr>
+                <tr>
+                    <th>구매처</th>
+                    <td>디바이스마트</td>
+                    <th>결제방법</th>
+                    <td>법인카드 / 계좌이체</td>
+                    <th>품목수</th>
+                    <td id="print-item-count">0건</td>
+                </tr>
+                <tr>
+                    <th>구매목적</th>
+                    <td colspan="5">프로젝트 수행 및 개발 업무에 필요한 부품/장비 구매</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="print-section-title">구매 요청 품목</div>
         <table class="print-table">
             <colgroup>
                 <col class="print-col-no">
@@ -84,8 +112,26 @@
                 </tr>
             </tfoot>
         </table>
+
+        <table class="print-note-table">
+            <tbody>
+                <tr>
+                    <th>구매 사유</th>
+                    <td>상기 품목은 개발 및 테스트 업무 수행에 필요한 자재로 구매를 요청합니다.</td>
+                </tr>
+                <tr>
+                    <th>비고</th>
+                    <td>견적 및 장바구니 내역 확인 후 결재 진행 바랍니다.</td>
+                </tr>
+            </tbody>
+        </table>
+
         <div class="print-footer">
-            <p>위와 같이 물품 구매를 신청하오니 결재하여 주시기 바랍니다.</p>
+            <p>위와 같이 물품 구매를 신청하오니 검토 후 결재하여 주시기 바랍니다.</p>
+            <div class="print-sign-row">
+                <span id="print-request-date-text">2026년 6월 18일</span>
+                <span>신청자: ____________________ (인)</span>
+            </div>
         </div>
     </div>
 
@@ -148,15 +194,30 @@
                 const printRows = document.querySelectorAll("#print-table-body tr");
                 const moneyCells = document.querySelectorAll(".print-money");
                 const total = document.getElementById("print-total-price").textContent.trim();
+                const documentNo = document.getElementById("print-document-no").textContent.trim();
+                const generatedAt = document.getElementById("print-generated-at").textContent.trim();
+                const itemCount = document.getElementById("print-item-count").textContent.trim();
+                const hasFormalSections = Boolean(
+                    document.querySelector(".print-approval") &&
+                    document.querySelector(".print-info-table") &&
+                    document.querySelector(".print-section-title") &&
+                    document.querySelector(".print-note-table") &&
+                    document.querySelector(".print-sign-row") &&
+                    document.querySelector(".print-grand-total-row")
+                );
                 const pass = document.body.dataset.printCalled === "true" &&
                     printRows.length === 3 &&
                     moneyCells.length === 6 &&
                     Array.from(moneyCells).every((cell) => cell.classList.contains("print-money")) &&
+                    documentNo.startsWith("문서번호: PO-") &&
+                    generatedAt.startsWith("작성일시: ") &&
+                    itemCount === "3건" &&
+                    hasFormalSections &&
                     total === "102,346,750원";
 
                 const output = document.getElementById("result");
                 output.dataset.pass = String(pass);
-                output.textContent = JSON.stringify({ pass, printRows: printRows.length, total }, null, 2);
+                output.textContent = JSON.stringify({ pass, printRows: printRows.length, documentNo, itemCount, total }, null, 2);
             }, 50);
         });
     </script>

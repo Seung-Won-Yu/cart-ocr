@@ -480,49 +480,123 @@ td[contenteditable="true"]:focus {
         color: #000;
         background: #fff;
         padding: 0;
+        font-family: 'Noto Sans KR', 'Malgun Gothic', Arial, sans-serif;
     }
 
     .print-header {
+        position: relative;
         text-align: center;
-        margin-bottom: 14px;
+        min-height: 82px;
+        margin-bottom: 10px;
+        border-bottom: 2px solid #111;
+    }
+
+    .print-doc-meta {
+        position: absolute;
+        left: 0;
+        top: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        font-size: 7.5pt;
+        text-align: left;
+        color: #333;
     }
 
     .print-header h1 {
-        font-size: 22pt;
+        display: inline-block;
+        font-size: 24pt;
         letter-spacing: 0.25em;
         text-decoration: underline;
         text-underline-offset: 4px;
-        margin-bottom: 10px;
+        margin: 20px 0 0;
+        padding-left: 0.25em;
     }
 
-    .print-meta {
-        display: flex;
-        justify-content: flex-end;
+    .print-approval {
+        position: absolute;
+        right: 0;
+        top: 0;
     }
 
-    .print-meta table {
+    .print-approval table {
         border-collapse: collapse;
-        width: 300px;
+        width: 210px;
         font-size: 8.5pt;
         table-layout: fixed;
     }
 
-    .print-meta th, .print-meta td {
+    .print-approval th,
+    .print-approval td {
         border: 1px solid #000;
-        padding: 4px 5px;
         text-align: center;
     }
 
-    .print-meta th {
+    .print-approval th {
+        height: 20px;
         background-color: #f2f2f2;
+        font-weight: 700;
+    }
+
+    .print-approval td {
+        height: 42px;
+        vertical-align: bottom;
+        padding-bottom: 5px;
+        color: #333;
+    }
+
+    .print-info-table,
+    .print-note-table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+        font-size: 8.8pt;
+        border: 1.5px solid #111;
+    }
+
+    .print-info-table {
+        margin-top: 10px;
+    }
+
+    .print-info-table th,
+    .print-info-table td,
+    .print-note-table th,
+    .print-note-table td {
+        border: 1px solid #111;
+        padding: 5px 6px;
+        vertical-align: middle;
+    }
+
+    .print-info-table th,
+    .print-note-table th {
+        width: 13%;
+        background: #f2f2f2;
+        text-align: center;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .print-info-table td {
+        height: 26px;
+    }
+
+    .print-section-title {
+        margin-top: 12px;
+        padding: 4px 6px;
+        border: 1.5px solid #111;
+        border-bottom: 0;
+        background: #f2f2f2;
+        font-size: 9pt;
+        font-weight: 700;
     }
 
     .print-table {
         width: 100%;
         border-collapse: collapse;
         table-layout: fixed;
-        margin-top: 14px;
+        margin-top: 0;
         font-size: 8.6pt;
+        border: 1.5px solid #111;
     }
 
     .print-col-no { width: 6%; }
@@ -533,7 +607,7 @@ td[contenteditable="true"]:focus {
     .print-col-amount { width: 18%; }
 
     .print-table th, .print-table td {
-        border: 1px solid #000;
+        border: 1px solid #111;
         padding: 4px 5px;
         text-align: left;
         vertical-align: middle;
@@ -552,6 +626,11 @@ td[contenteditable="true"]:focus {
         background-color: #f2f2f2;
         text-align: center;
         font-weight: bold;
+    }
+
+    .print-table thead th {
+        border-top: 1.5px solid #111;
+        border-bottom: 1.5px solid #111;
     }
 
     .print-table tbody tr,
@@ -585,8 +664,14 @@ td[contenteditable="true"]:focus {
         font-weight: 600;
     }
 
+    .print-table tr:last-child td,
+    .print-table tfoot tr:last-child td {
+        border-bottom: 1.5px solid #111;
+    }
+
     .print-grand-total-row td {
         border-top-width: 2px;
+        border-bottom-width: 1.5px;
         font-weight: 700;
     }
 
@@ -594,12 +679,34 @@ td[contenteditable="true"]:focus {
         text-align: right;
     }
 
+    .print-note-table {
+        margin-top: 10px;
+    }
+
+    .print-note-table th {
+        width: 18%;
+    }
+
+    .print-note-table td {
+        min-height: 28px;
+        height: 28px;
+        line-height: 1.35;
+    }
+
     .print-footer {
         break-inside: avoid;
         page-break-inside: avoid;
-        margin-top: 22px;
+        margin-top: 18px;
         text-align: center;
         font-size: 10pt;
         font-weight: 500;
+    }
+
+    .print-sign-row {
+        display: flex;
+        justify-content: center;
+        gap: 50px;
+        margin-top: 14px;
+        font-size: 9.5pt;
     }
 }
