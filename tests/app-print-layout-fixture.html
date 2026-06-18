@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>CartOCR print layout fixture</title>
+    <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+    <div class="app-container">
+        <button id="theme-toggle"><span>dark_mode</span></button>
+        <table>
+            <tbody id="table-body"></tbody>
+            <tfoot>
+                <tr id="subtotal-row-container"><td id="subtotal-price"></td></tr>
+                <tr id="vat-row-container"><td id="vat-price"></td></tr>
+                <tr id="shipping-row-container"><td id="shipping-price"></td></tr>
+                <tr id="total-row-container"><td id="total-price"></td></tr>
+            </tfoot>
+        </table>
+        <div id="table-actions-container"></div>
+        <button id="add-row-btn">add</button>
+        <div id="export-section"></div>
+        <button id="copy-markdown-btn">copy</button>
+        <button id="download-csv-btn">csv</button>
+        <button id="print-doc-btn">print</button>
+    </div>
+
+    <div id="print-layout" class="print-only">
+        <div class="print-header">
+            <h1>구 매 신 청 서</h1>
+            <div class="print-meta">
+                <table>
+                    <tr>
+                        <th>신청부서</th>
+                        <td>하드웨어팀</td>
+                        <th>신 청 자</th>
+                        <td>(인)</td>
+                    </tr>
+                    <tr>
+                        <th>신청일자</th>
+                        <td id="print-date">2026-06-18</td>
+                        <th>결 재 자</th>
+                        <td>대표이사 (인)</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        <table class="print-table">
+            <colgroup>
+                <col class="print-col-no">
+                <col class="print-col-image">
+                <col class="print-col-name">
+                <col class="print-col-qty">
+                <col class="print-col-price">
+                <col class="print-col-amount">
+            </colgroup>
+            <thead>
+                <tr>
+                    <th>No.</th>
+                    <th>이미지</th>
+                    <th>품명 및 규격</th>
+                    <th>수량</th>
+                    <th>단가</th>
+                    <th>금액</th>
+                </tr>
+            </thead>
+            <tbody id="print-table-body"></tbody>
+            <tfoot>
+                <tr id="print-subtotal-row" class="hidden">
+                    <td colspan="5" class="text-right">상품 주문 금액</td>
+                    <td id="print-subtotal-price">0원</td>
+                </tr>
+                <tr id="print-vat-row" class="hidden">
+                    <td colspan="5" class="text-right">부가세</td>
+                    <td id="print-vat-price">0원</td>
+                </tr>
+                <tr id="print-shipping-row" class="hidden">
+                    <td colspan="5" class="text-right">배송비</td>
+                    <td id="print-shipping-price">0원</td>
+                </tr>
+                <tr class="print-grand-total-row">
+                    <td colspan="5" class="text-right"><strong>결제 예정금액 (부가세 포함)</strong></td>
+                    <td id="print-total-price">0원</td>
+                </tr>
+            </tfoot>
+        </table>
+        <div class="print-footer">
+            <p>위와 같이 물품 구매를 신청하오니 결재하여 주시기 바랍니다.</p>
+        </div>
+    </div>
+
+    <pre id="result">pending</pre>
+
+    <script>
+        window.print = () => {
+            document.body.dataset.printCalled = "true";
+        };
+
+        localStorage.setItem("scraped_cart_data", JSON.stringify({
+            items: [
+                {
+                    name: "전압 강화형 DC/DC 변환 컨버터 24V to 5V [SZH-BPM003]",
+                    quantity: 5,
+                    price: 8500,
+                    amount: 42500,
+                    image: "",
+                    sourceMall: "devicemart",
+                    priceKind: "line-total-derived",
+                    sourceLineAmount: 42500
+                },
+                {
+                    name: "[해외]Mecademic Meca500 MiniONE Pro Gen A 키트 (EtherCAT) [KIT-MIPS-MEC-CAT]",
+                    quantity: 2,
+                    price: 18500000,
+                    amount: 37000000,
+                    image: "",
+                    sourceMall: "devicemart",
+                    priceKind: "line-total-derived",
+                    sourceLineAmount: 37000000
+                },
+                {
+                    name: "[해외]Kinova Gen3 6축 F/T 센서 [BFT-KG3-IND2-SW]",
+                    quantity: 4,
+                    price: 14000000,
+                    amount: 56000000,
+                    image: "",
+                    sourceMall: "devicemart",
+                    priceKind: "line-total-derived",
+                    sourceLineAmount: 56000000
+                }
+            ],
+            summary: {
+                sourceMall: "devicemart",
+                productTotal: 93042500,
+                vat: 9304250,
+                shipping: 0,
+                grandTotal: 102346750,
+                includesVat: true
+            }
+        }));
+    </script>
+    <script src="../app.js"></script>
+    <script>
+        window.addEventListener("DOMContentLoaded", () => {
+            setTimeout(() => {
+                document.getElementById("print-doc-btn").click();
+
+                const printRows = document.querySelectorAll("#print-table-body tr");
+                const moneyCells = document.querySelectorAll(".print-money");
+                const total = document.getElementById("print-total-price").textContent.trim();
+                const pass = document.body.dataset.printCalled === "true" &&
+                    printRows.length === 3 &&
+                    moneyCells.length === 6 &&
+                    Array.from(moneyCells).every((cell) => cell.classList.contains("print-money")) &&
+                    total === "102,346,750원";
+
+                const output = document.getElementById("result");
+                output.dataset.pass = String(pass);
+                output.textContent = JSON.stringify({ pass, printRows: printRows.length, total }, null, 2);
+            }, 50);
+        });
+    </script>
+</body>
+</html>

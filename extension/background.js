@@ -60,7 +60,7 @@ async function fetchImageAsBase64(url) {
 async function openAppAndInjectStorage(dataString) {
     return new Promise((resolve, reject) => {
         // 1. 웹 앱 탭 띄우기
-        chrome.tabs.create({ url: "https://seung-won-yu.github.io/cart-ocr/?v=1.4" }, (tab) => {
+        chrome.tabs.create({ url: "https://seung-won-yu.github.io/cart-ocr/?v=1.5" }, (tab) => {
             if (!tab) {
                 reject(new Error("새 탭을 생성할 수 없습니다."));
                 return;

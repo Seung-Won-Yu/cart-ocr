@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CartOCR - 구매신청서 자동 문서화 도구</title>
-    <link rel="stylesheet" href="style.css?v=1.4">
+    <link rel="stylesheet" href="style.css?v=1.5">
     <!-- Google Fonts & Icon -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,7 +18,7 @@
             <div class="logo">
                 <span class="material-symbols-rounded logo-icon">shopping_cart_checkout</span>
                 <h1>CartOCR</h1>
-                <span class="badge">v1.4 (익스텐션 전용)</span>
+                <span class="badge">v1.5 (익스텐션 전용)</span>
             </div>
             <div class="header-actions">
                 <button id="theme-toggle" class="btn-icon" title="테마 변경">
@@ -142,14 +142,22 @@
             </div>
         </div>
         <table class="print-table">
+            <colgroup>
+                <col class="print-col-no">
+                <col class="print-col-image">
+                <col class="print-col-name">
+                <col class="print-col-qty">
+                <col class="print-col-price">
+                <col class="print-col-amount">
+            </colgroup>
             <thead>
                 <tr>
-                    <th width="5%">No.</th>
-                    <th width="10%">이미지</th>
-                    <th width="50%">품명 및 규격</th>
-                    <th width="10%">수량</th>
-                    <th width="12%">단가</th>
-                    <th width="13%">금액</th>
+                    <th>No.</th>
+                    <th>이미지</th>
+                    <th>품명 및 규격</th>
+                    <th>수량</th>
+                    <th>단가</th>
+                    <th>금액</th>
                 </tr>
             </thead>
             <tbody id="print-table-body">
@@ -168,7 +176,7 @@
                     <td colspan="5" class="text-right">배송비</td>
                     <td id="print-shipping-price">0원</td>
                 </tr>
-                <tr>
+                <tr class="print-grand-total-row">
                     <td colspan="5" class="text-right"><strong>결제 예정금액 (부가세 포함)</strong></td>
                     <td id="print-total-price">0원</td>
                 </tr>
@@ -179,6 +187,6 @@
         </div>
     </div>
 
-    <script src="app.js?v=1.4"></script>
+    <script src="app.js?v=1.5"></script>
 </body>
 </html>

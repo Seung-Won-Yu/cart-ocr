@@ -2,6 +2,7 @@ const http = require("http");
 const path = require("path");
 const fs = require("fs");
 const { execFile } = require("child_process");
+const os = require("os");
 
 const rootDir = path.resolve(__dirname, "..");
 const chromePath = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
@@ -66,6 +67,52 @@ function dumpDom(url) {
     });
 }
 
+function printToPdf(url) {
+    return new Promise((resolve, reject) => {
+        const profileDir = `/tmp/cart-ocr-chrome-print-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        const pdfPath = path.join(os.tmpdir(), `cart-ocr-print-${Date.now()}-${Math.random().toString(16).slice(2)}.pdf`);
+
+        execFile(chromePath, [
+            "--headless=new",
+            "--disable-gpu",
+            "--disable-background-networking",
+            "--disable-sync",
+            "--disable-extensions",
+            "--no-first-run",
+            `--user-data-dir=${profileDir}`,
+            "--host-resolver-rules=MAP www.devicemart.co.kr 127.0.0.1,MAP cart.coupang.com 127.0.0.1",
+            "--print-to-pdf-no-header",
+            `--print-to-pdf=${pdfPath}`,
+            "--virtual-time-budget=5000",
+            url
+        ], { maxBuffer: 1024 * 1024 * 5, timeout: 15000 }, (error, stdout, stderr) => {
+            fs.rm(profileDir, { recursive: true, force: true }, () => {});
+            if (error) {
+                fs.rm(pdfPath, { force: true }, () => {});
+                error.message += `\n${stderr}`;
+                reject(error);
+                return;
+            }
+
+            execFile("pdfinfo", [pdfPath], { timeout: 5000 }, (pdfError, pdfStdout, pdfStderr) => {
+                fs.rm(pdfPath, { force: true }, () => {});
+                if (pdfError) {
+                    pdfError.message += `\n${pdfStderr}`;
+                    reject(pdfError);
+                    return;
+                }
+
+                const pagesMatch = pdfStdout.match(/^Pages:\s+(\d+)/m);
+                if (!pagesMatch) {
+                    reject(new Error("No PDF page count found"));
+                    return;
+                }
+                resolve(parseInt(pagesMatch[1], 10));
+            });
+        });
+    });
+}
+
 function extractResult(html) {
     const match = html.match(/<pre id="result">([\s\S]*?)<\/pre>/);
     if (!match) throw new Error("No test result found in dumped DOM");
@@ -113,6 +160,17 @@ async function main() {
             name: "app-devicemart-import-summary",
             url: `http://www.devicemart.co.kr:${port}/tests/app-devicemart-import-fixture.html`,
             type: "pass"
+        },
+        {
+            name: "app-print-layout-dom",
+            url: `http://www.devicemart.co.kr:${port}/tests/app-print-layout-fixture.html`,
+            type: "pass"
+        },
+        {
+            name: "app-print-layout-pdf",
+            url: `http://www.devicemart.co.kr:${port}/tests/app-print-layout-fixture.html`,
+            type: "pdf-pages",
+            expectedPages: 1
         }
     ];
 
@@ -124,8 +182,15 @@ async function main() {
                 if (!result.ok) {
                     throw new Error(`${result.fixture} failed: ${result.error}`);
                 }
-            } else if (!extractPass(html)) {
-                throw new Error(`${testCase.name} failed`);
+            } else if (testCase.type === "pass") {
+                if (!extractPass(html)) {
+                    throw new Error(`${testCase.name} failed`);
+                }
+            } else if (testCase.type === "pdf-pages") {
+                const pages = await printToPdf(testCase.url);
+                if (pages !== testCase.expectedPages) {
+                    throw new Error(`${testCase.name} failed: expected ${testCase.expectedPages} page(s), got ${pages}`);
+                }
             }
             console.log(`${testCase.name}: ok`);
         }

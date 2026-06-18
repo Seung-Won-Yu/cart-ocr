@@ -408,14 +408,14 @@ document.addEventListener('DOMContentLoaded', () => {
         currentItems.forEach((item, index) => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td style="text-align: center;">${index + 1}</td>
-                <td style="text-align: center; padding: 4px;">
+                <td class="print-index">${index + 1}</td>
+                <td class="print-image-cell">
                     <img class="print-thumb" src="${item.image || 'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?w=80&auto=format&fit=crop&q=60'}" alt="상품 이미지" referrerpolicy="no-referrer">
                 </td>
-                <td>${escapeHtml(item.name)}</td>
-                <td style="text-align: right;">${item.quantity}</td>
-                <td style="text-align: right;">${formatNumber(item.price)}원</td>
-                <td style="text-align: right;">${formatNumber(item.amount)}원</td>
+                <td class="print-name">${escapeHtml(item.name)}</td>
+                <td class="print-number">${item.quantity}</td>
+                <td class="print-money">${formatNumber(item.price)}원</td>
+                <td class="print-money">${formatNumber(item.amount)}원</td>
             `;
             printTableBody.appendChild(tr);
         });
