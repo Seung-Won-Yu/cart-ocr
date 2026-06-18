@@ -3,7 +3,7 @@
  * 핫링크 회피, CORS 우회 및 상품 이미지 저장소 Whitelist 매칭 로직이 탑재된 최종 V6 스크래퍼
  */
 
-var CART_OCR_SCRAPE_ACTION = "scrape_cart_v7";
+var CART_OCR_SCRAPE_ACTION = "scrape_cart_v8";
 
 if (!window.__cartOcrRegisteredActions) {
     window.__cartOcrRegisteredActions = {};
@@ -441,15 +441,38 @@ function parseQuantityText(value) {
 }
 
 function extractDeviceMartLineAmount(row, cells, nameEl) {
+    const preferredAmount = extractDeviceMartPreferredLineAmount(row);
+    if (preferredAmount) return preferredAmount;
+
     const amountCell = findCellByHeader(cells, /상품금액|주문금액|결제금액|합계|총액|금액|amount|total/i);
     const headerAmount = amountCell ? extractLastPositiveWonAmount(amountCell.textContent) : 0;
     if (headerAmount) return headerAmount;
 
-    const priceEl = row.querySelector(".goods_price, .price, td.price, span.price_value, strong.price, td.price_cell");
+    const priceEl = row.querySelector(".goodsPrice, .goods_price, .price, td.price, span.price_value, strong.price, td.price_cell");
     const selectorAmount = priceEl ? extractLastPositiveWonAmount(priceEl.textContent) : 0;
     if (selectorAmount) return selectorAmount;
 
     return extractDeviceMartFallbackLineAmount(row, cells);
+}
+
+function extractDeviceMartPreferredLineAmount(row) {
+    const preferredSelectors = [
+        "td.pur_price",
+        "td[class*='pur_price']",
+        "td[class*='pur-price']",
+        ".goodsPrice",
+        ".goods_price",
+        "[class*='goodsPrice']",
+        "[class*='goods_price']"
+    ];
+    const elements = row.querySelectorAll(preferredSelectors.join(", "));
+
+    for (const element of elements) {
+        const amount = extractLastPositiveWonAmount(element.textContent);
+        if (amount) return amount;
+    }
+
+    return 0;
 }
 
 function extractDeviceMartFallbackLineAmount(row, cells) {
@@ -465,7 +488,7 @@ function extractDeviceMartFallbackLineAmount(row, cells) {
         const headerText = getHeaderTextForCell(cell);
         let score = 0;
         if (/상품금액|주문금액|결제금액|합계|총액|금액|amount|total/i.test(headerText)) score += 100;
-        if (/\b(price|goods_price|price_area|total|amount)\b/i.test(`${cell.className || ""} ${cell.id || ""}`)) score += 40;
+        if (/pur[_-]?price|goods[_-]?price|goodsPrice|price[_-]?area|\b(price|total|amount)\b/i.test(`${cell.className || ""} ${cell.id || ""}`)) score += 40;
         if (/배송|ship|택배|delivery/i.test(text)) score -= 80;
         if (/적립|point|마일리지|쿠폰|할인/i.test(text)) score -= 30;
         if (/삭제|변경|납기/i.test(text)) score -= 20;
