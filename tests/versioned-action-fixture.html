@@ -40,7 +40,7 @@
     <script src="../extension/content.js"></script>
     <script>
         setTimeout(() => {
-            listeners[0]({ action: "scrape_cart_v5" }, null, response => {
+            listeners[0]({ action: "scrape_cart_v6" }, null, response => {
                 const item = response.items && response.items[0];
                 const pass = listeners.length === 1 &&
                     response.success === true &&

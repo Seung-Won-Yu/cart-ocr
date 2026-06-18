@@ -45,6 +45,17 @@
                 <td>0원</td>
                 <td>3~4일</td>
             </tr>
+            <tr>
+                <td><input type="checkbox" checked></td>
+                <td colspan="6">
+                    <img src="https://www.devicemart.co.kr/goods_img/test-packed.jpg" alt="packed row">
+                    <a href="/goods/view?no=4">테이블 병합형 테스트 상품 [COM-99999]</a>
+                    <span class="qty">- 10 +</span>
+                    <span class="price_area">상품금액 45,000원</span>
+                    <span>적립 0원</span>
+                    <span>납기 1주일</span>
+                </td>
+            </tr>
         </tbody>
     </table>
 
@@ -70,7 +81,8 @@
             const expected = [
                 { quantity: 10, price: 4500, amount: 45000 },
                 { quantity: 3, price: 9000000, amount: 27000000 },
-                { quantity: 5, price: 8500, amount: 42500 }
+                { quantity: 5, price: 8500, amount: 42500 },
+                { quantity: 10, price: 4500, amount: 45000 }
             ];
             const pass = result.length === expected.length &&
                 result.every((item, index) => item.quantity === expected[index].quantity &&
@@ -79,7 +91,7 @@
                     item.sourceMall === "devicemart" &&
                     item.priceKind === "line-total-derived" &&
                     item.sourceLineAmount === expected[index].amount) &&
-                result.reduce((sum, item) => sum + item.amount, 0) === 27087500;
+                result.reduce((sum, item) => sum + item.amount, 0) === 27132500;
 
             const output = document.getElementById("result");
             output.dataset.pass = String(pass);

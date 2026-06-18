@@ -3,7 +3,7 @@
  * 핫링크 회피, CORS 우회 및 상품 이미지 저장소 Whitelist 매칭 로직이 탑재된 최종 V6 스크래퍼
  */
 
-var CART_OCR_SCRAPE_ACTION = "scrape_cart_v5";
+var CART_OCR_SCRAPE_ACTION = "scrape_cart_v6";
 
 if (!window.__cartOcrRegisteredActions) {
     window.__cartOcrRegisteredActions = {};
@@ -217,15 +217,13 @@ async function parseKnownMallCart(debugLog) {
             const quantity = extractDeviceMartQuantity(row, cells) || 1;
 
             // 디바이스마트 장바구니의 "상품금액"은 단가가 아니라 수량이 반영된 행 금액입니다.
-            let amount = extractDeviceMartLineAmount(cells, nameEl);
+            let amount = extractDeviceMartLineAmount(row, cells, nameEl);
             let price = amount ? deriveUnitPrice(amount, quantity) : 0;
 
-            // 2차: 셀렉터 실패 시 → 행 내 모든 <td>를 순회하며 "원" 포함 셀에서 가격 추출
+            // 2차: 디바이스마트의 가격 후보는 단가가 아니라 행 합계로 취급합니다.
             if (price === 0) {
-                price = extractUnitPriceFromRowCells(cells, quantity, {
-                    skipElements: [nameEl],
-                    qtyIndexes: []
-                });
+                amount = extractDeviceMartFallbackLineAmount(row, cells);
+                price = amount ? deriveUnitPrice(amount, quantity) : 0;
             }
 
             // 첫 번째 td(보통 체크박스)는 건너뛰고 이미지 찾기
@@ -248,7 +246,7 @@ async function parseKnownMallCart(debugLog) {
             const imageUrl = resolveImageUrl(imgEl);
             const image = await convertImageToBase64(imageUrl);
 
-            if (!amount) amount = price * quantity;
+            if (!amount && price) amount = price * quantity;
             if (name && price > 0) {
                 items.push({
                     name,
@@ -405,6 +403,9 @@ function extractDeviceMartQuantity(row, cells) {
     const quantityFromInput = quantityInput ? parseQuantityText(quantityInput.value || quantityInput.textContent) : 0;
     if (quantityFromInput) return quantityFromInput;
 
+    const stepperMatch = row.textContent.replace(/\s+/g, " ").match(/[−-]\s*(\d{1,3})\s*\+/);
+    if (stepperMatch) return parseInt(stepperMatch[1], 10) || 1;
+
     for (const cell of cells) {
         const text = cell.textContent || "";
         if (/(원|₩)|배송|ship|적립|point|납기|일|주/.test(text)) continue;
@@ -439,19 +440,56 @@ function parseQuantityText(value) {
     return 0;
 }
 
-function extractDeviceMartLineAmount(cells, nameEl) {
+function extractDeviceMartLineAmount(row, cells, nameEl) {
     const amountCell = findCellByHeader(cells, /상품금액|주문금액|결제금액|합계|총액|금액|amount|total/i);
-    const headerAmount = amountCell ? extractPriceFromText(amountCell.textContent) : 0;
+    const headerAmount = amountCell ? extractLastPositiveWonAmount(amountCell.textContent) : 0;
     if (headerAmount) return headerAmount;
 
-    const row = nameEl ? nameEl.closest("tr") : null;
-    const priceEl = row ? row.querySelector(".goods_price, .price, td.price, span.price_value, strong.price, td.price_cell") : null;
-    const selectorAmount = priceEl ? extractPriceFromText(priceEl.textContent) : 0;
+    const priceEl = row.querySelector(".goods_price, .price, td.price, span.price_value, strong.price, td.price_cell");
+    const selectorAmount = priceEl ? extractLastPositiveWonAmount(priceEl.textContent) : 0;
     if (selectorAmount) return selectorAmount;
 
-    return extractLineAmountFromRowCells(cells, {
-        skipElements: [nameEl]
+    return extractDeviceMartFallbackLineAmount(row, cells);
+}
+
+function extractDeviceMartFallbackLineAmount(row, cells) {
+    const candidates = [];
+
+    cells.forEach((cell, index) => {
+        if (!cell || cell.querySelector("input[type='checkbox']")) return;
+
+        const text = cell.textContent.trim();
+        const amount = extractLastPositiveWonAmount(text);
+        if (!amount) return;
+
+        const headerText = getHeaderTextForCell(cell);
+        let score = 0;
+        if (/상품금액|주문금액|결제금액|합계|총액|금액|amount|total/i.test(headerText)) score += 100;
+        if (/\b(price|goods_price|price_area|total|amount)\b/i.test(`${cell.className || ""} ${cell.id || ""}`)) score += 40;
+        if (/배송|ship|택배|delivery/i.test(text)) score -= 80;
+        if (/적립|point|마일리지|쿠폰|할인/i.test(text)) score -= 30;
+        if (/삭제|변경|납기/i.test(text)) score -= 20;
+
+        candidates.push({ amount, score, index });
     });
+
+    if (candidates.length > 0) {
+        candidates.sort((a, b) => b.score - a.score || a.index - b.index);
+        return candidates[0].amount;
+    }
+
+    return extractLastPositiveWonAmount(row.textContent);
+}
+
+function extractLastPositiveWonAmount(text) {
+    const matches = String(text || "").match(/[0-9,]+\s*(?:원|₩)/g);
+    if (!matches) return 0;
+
+    const values = matches
+        .map(match => parseInt(match.replace(/[^0-9]/g, ""), 10))
+        .filter(value => value > 0);
+
+    return values.length > 0 ? values[values.length - 1] : 0;
 }
 
 function findCellByHeader(cells, pattern) {
