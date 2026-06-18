@@ -100,6 +100,11 @@ async function main() {
             type: "pass"
         },
         {
+            name: "devicemart-bruteforce-line-total",
+            url: `http://www.devicemart.co.kr:${port}/tests/devicemart-bruteforce-fixture.html`,
+            type: "pass"
+        },
+        {
             name: "versioned-action",
             url: `http://www.devicemart.co.kr:${port}/tests/versioned-action-fixture.html`,
             type: "pass"

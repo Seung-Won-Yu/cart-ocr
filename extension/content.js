@@ -3,7 +3,7 @@
  * 핫링크 회피, CORS 우회 및 상품 이미지 저장소 Whitelist 매칭 로직이 탑재된 최종 V6 스크래퍼
  */
 
-var CART_OCR_SCRAPE_ACTION = "scrape_cart_v6";
+var CART_OCR_SCRAPE_ACTION = "scrape_cart_v7";
 
 if (!window.__cartOcrRegisteredActions) {
     window.__cartOcrRegisteredActions = {};
@@ -680,14 +680,25 @@ async function parseDivBasedCart(debugLog) {
 
             const priceEl = container.querySelector("[class*='price'], [class*='amount']");
             let price = priceEl ? extractPriceFromText(priceEl.textContent) : 0;
+            let amount = price * quantity;
+
+            if (window.location.href.includes("devicemart.co.kr")) {
+                amount = price;
+                price = deriveUnitPrice(amount, quantity);
+            }
 
             const imgEl = container.querySelector("img");
             const imageUrl = resolveImageUrl(imgEl);
             const image = await convertImageToBase64(imageUrl);
 
-            const amount = price * quantity;
             if (name && price > 0) {
-                items.push({ name, price, quantity, amount, image });
+                const item = { name, price, quantity, amount, image };
+                if (window.location.href.includes("devicemart.co.kr")) {
+                    item.sourceMall = "devicemart";
+                    item.priceKind = "line-total-derived";
+                    item.sourceLineAmount = amount;
+                }
+                items.push(item);
             }
         } catch (e) {}
     }
@@ -788,15 +799,30 @@ async function parseBruteForceCart(debugLog) {
             const imageUrl = resolveImageUrl(imgEl);
             const image = await convertImageToBase64(imageUrl);
 
-            const amount = bestPrice * val;
+            let price = bestPrice;
+            let amount = bestPrice * val;
+
+            if (window.location.href.includes("devicemart.co.kr")) {
+                amount = bestPrice;
+                price = deriveUnitPrice(amount, val);
+            }
+
             if (bestName && bestPrice > 0) {
-                items.push({
+                const item = {
                     name: bestName,
-                    price: bestPrice,
+                    price,
                     quantity: val,
-                    amount: amount,
+                    amount,
                     image: image
-                });
+                };
+
+                if (window.location.href.includes("devicemart.co.kr")) {
+                    item.sourceMall = "devicemart";
+                    item.priceKind = "line-total-derived";
+                    item.sourceLineAmount = amount;
+                }
+
+                items.push(item);
             }
         } catch (e) {}
     }

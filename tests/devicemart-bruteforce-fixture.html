@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>CartOCR DeviceMart brute force fixture</title>
+</head>
+<body>
+    <section class="cart-list">
+        <div class="legacy-list-row">
+            <img src="https://www.devicemart.co.kr/goods_img/test-driver.jpg" alt="H-Bridge Motor Driver">
+            <a href="/goods/detail?no=1">[해외]H-Bridge Motor Driver 1A [COM-00315]</a>
+            <input name="qty[]" value="10">
+            <span>상품금액 45,000원</span>
+            <span>적립 0원</span>
+            <button>삭제</button>
+        </div>
+    </section>
+
+    <pre id="result">pending</pre>
+
+    <script>
+        window.chrome = {
+            runtime: {
+                lastError: null,
+                onMessage: {
+                    addListener() {}
+                },
+                sendMessage(request, callback) {
+                    callback({ success: true, data: `image:${request.url}` });
+                }
+            }
+        };
+    </script>
+    <script src="../extension/content.js"></script>
+    <script>
+        setTimeout(async () => {
+            const result = await scrapeCurrentCart();
+            const item = result[0];
+            const pass = result.length === 1 &&
+                item.name === "[해외]H-Bridge Motor Driver 1A [COM-00315]" &&
+                item.quantity === 10 &&
+                item.price === 4500 &&
+                item.amount === 45000 &&
+                item.sourceMall === "devicemart" &&
+                item.priceKind === "line-total-derived" &&
+                item.sourceLineAmount === 45000;
+
+            const output = document.getElementById("result");
+            output.dataset.pass = String(pass);
+            output.textContent = JSON.stringify({ pass, result }, null, 2);
+        }, 0);
+    </script>
+</body>
+</html>
