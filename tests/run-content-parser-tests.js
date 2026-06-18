@@ -108,6 +108,11 @@ async function main() {
             name: "versioned-action",
             url: `http://www.devicemart.co.kr:${port}/tests/versioned-action-fixture.html`,
             type: "pass"
+        },
+        {
+            name: "app-devicemart-import-summary",
+            url: `http://www.devicemart.co.kr:${port}/tests/app-devicemart-import-fixture.html`,
+            type: "pass"
         }
     ];
 

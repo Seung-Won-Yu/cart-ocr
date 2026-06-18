@@ -330,15 +330,26 @@ td[contenteditable="true"]:focus {
     opacity: 1;
 }
 
+.summary-row,
 .total-row {
     font-weight: 700;
     background-color: var(--table-header-bg);
 }
 
+.summary-row {
+    font-weight: 600;
+}
+
+.summary-row td:first-child,
 .total-row td:first-child {
     text-align: right;
     color: var(--text-secondary);
     font-size: 13px;
+}
+
+.summary-price {
+    color: var(--text-primary);
+    font-weight: 600;
 }
 
 .total-price {

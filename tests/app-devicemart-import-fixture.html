@@ -10,6 +10,9 @@
     <table>
         <tbody id="table-body"></tbody>
         <tfoot>
+            <tr id="subtotal-row-container"><td id="subtotal-price"></td></tr>
+            <tr id="vat-row-container"><td id="vat-price"></td></tr>
+            <tr id="shipping-row-container"><td id="shipping-price"></td></tr>
             <tr id="total-row-container"><td id="total-price"></td></tr>
         </tfoot>
     </table>
@@ -21,44 +24,57 @@
     <button id="download-csv-btn">csv</button>
     <button id="print-doc-btn">print</button>
     <table><tbody id="print-table-body"></tbody></table>
+    <span id="print-subtotal-row"><span id="print-subtotal-price"></span></span>
+    <span id="print-vat-row"><span id="print-vat-price"></span></span>
+    <span id="print-shipping-row"><span id="print-shipping-price"></span></span>
     <span id="print-total-price"></span>
     <span id="print-date"></span>
 
     <pre id="result">pending</pre>
 
     <script>
-        localStorage.setItem("scraped_cart_data", JSON.stringify([
-            {
-                name: "[해외]LT3652 Power Tracking 2A Battery Charger (SMD) [COM-29756]",
-                quantity: 5,
-                price: 93000,
-                amount: 465000,
-                image: "",
+        localStorage.setItem("scraped_cart_data", JSON.stringify({
+            items: [
+                {
+                    name: "[해외]LT3652 Power Tracking 2A Battery Charger (SMD) [COM-29756]",
+                    quantity: 5,
+                    price: 93000,
+                    amount: 465000,
+                    image: "",
+                    sourceMall: "devicemart",
+                    priceKind: "line-total-derived",
+                    sourceLineAmount: 93000
+                },
+                {
+                    name: "전류센서(WCS1800)",
+                    quantity: 4,
+                    price: 22000,
+                    amount: 88000,
+                    image: "",
+                    sourceMall: "devicemart",
+                    priceKind: "line-total-derived",
+                    sourceLineAmount: 22000
+                },
+                {
+                    name: "개폐형 전류센서 (FS4C)",
+                    quantity: 6,
+                    price: 52200,
+                    amount: 313200,
+                    image: "",
+                    sourceMall: "devicemart",
+                    priceKind: "line-total-derived",
+                    sourceLineAmount: 52200
+                }
+            ],
+            summary: {
                 sourceMall: "devicemart",
-                priceKind: "line-total-derived",
-                sourceLineAmount: 93000
-            },
-            {
-                name: "전류센서(WCS1800)",
-                quantity: 4,
-                price: 22000,
-                amount: 88000,
-                image: "",
-                sourceMall: "devicemart",
-                priceKind: "line-total-derived",
-                sourceLineAmount: 22000
-            },
-            {
-                name: "개폐형 전류센서 (FS4C)",
-                quantity: 6,
-                price: 52200,
-                amount: 313200,
-                image: "",
-                sourceMall: "devicemart",
-                priceKind: "line-total-derived",
-                sourceLineAmount: 52200
+                productTotal: 167200,
+                vat: 16720,
+                shipping: 0,
+                grandTotal: 183920,
+                includesVat: true
             }
-        ]));
+        }));
     </script>
     <script src="../app.js"></script>
     <script>
@@ -66,6 +82,9 @@
             setTimeout(() => {
                 const rows = Array.from(document.querySelectorAll("#table-body tr"));
                 const cells = rows.map((row) => Array.from(row.querySelectorAll("td")).map((cell) => cell.textContent.trim()));
+                const subtotal = document.getElementById("subtotal-price").textContent.trim();
+                const vat = document.getElementById("vat-price").textContent.trim();
+                const shipping = document.getElementById("shipping-price").textContent.trim();
                 const total = document.getElementById("total-price").textContent.trim();
                 const pass = cells.length === 3 &&
                     cells[0][3] === "18,600" &&
@@ -74,11 +93,14 @@
                     cells[1][4] === "22,000" &&
                     cells[2][3] === "8,700" &&
                     cells[2][4] === "52,200" &&
-                    total === "167,200원";
+                    subtotal === "167,200원" &&
+                    vat === "16,720원" &&
+                    shipping === "0원" &&
+                    total === "183,920원";
 
                 const output = document.getElementById("result");
                 output.dataset.pass = String(pass);
-                output.textContent = JSON.stringify({ pass, cells, total }, null, 2);
+                output.textContent = JSON.stringify({ pass, cells, subtotal, vat, shipping, total }, null, 2);
             }, 50);
         });
     </script>

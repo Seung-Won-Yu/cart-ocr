@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CartOCR - 구매신청서 자동 문서화 도구</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=1.4">
     <!-- Google Fonts & Icon -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,7 +18,7 @@
             <div class="logo">
                 <span class="material-symbols-rounded logo-icon">shopping_cart_checkout</span>
                 <h1>CartOCR</h1>
-                <span class="badge">v1.3 (익스텐션 전용)</span>
+                <span class="badge">v1.4 (익스텐션 전용)</span>
             </div>
             <div class="header-actions">
                 <button id="theme-toggle" class="btn-icon" title="테마 변경">
@@ -58,8 +58,23 @@
                             </tr>
                         </tbody>
                         <tfoot>
+                            <tr class="summary-row hidden" id="subtotal-row-container">
+                                <td colspan="4">상품 주문 금액</td>
+                                <td id="subtotal-price" class="summary-price">0원</td>
+                                <td></td>
+                            </tr>
+                            <tr class="summary-row hidden" id="vat-row-container">
+                                <td colspan="4">부가세</td>
+                                <td id="vat-price" class="summary-price">0원</td>
+                                <td></td>
+                            </tr>
+                            <tr class="summary-row hidden" id="shipping-row-container">
+                                <td colspan="4">배송비</td>
+                                <td id="shipping-price" class="summary-price">0원</td>
+                                <td></td>
+                            </tr>
                             <tr class="total-row hidden" id="total-row-container">
-                                <td colspan="4">총 구매 예정 금액</td>
+                                <td colspan="4">결제 예정금액</td>
                                 <td id="total-price" class="total-price">0원</td>
                                 <td></td>
                             </tr>
@@ -141,8 +156,20 @@
                 <!-- 동적으로 인쇄 항목 렌더링 -->
             </tbody>
             <tfoot>
+                <tr id="print-subtotal-row" class="hidden">
+                    <td colspan="5" class="text-right">상품 주문 금액</td>
+                    <td id="print-subtotal-price">0원</td>
+                </tr>
+                <tr id="print-vat-row" class="hidden">
+                    <td colspan="5" class="text-right">부가세</td>
+                    <td id="print-vat-price">0원</td>
+                </tr>
+                <tr id="print-shipping-row" class="hidden">
+                    <td colspan="5" class="text-right">배송비</td>
+                    <td id="print-shipping-price">0원</td>
+                </tr>
                 <tr>
-                    <td colspan="5" class="text-right"><strong>합 계 (부가세 포함)</strong></td>
+                    <td colspan="5" class="text-right"><strong>결제 예정금액 (부가세 포함)</strong></td>
                     <td id="print-total-price">0원</td>
                 </tr>
             </tfoot>
@@ -152,6 +179,6 @@
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <script src="app.js?v=1.4"></script>
 </body>
 </html>

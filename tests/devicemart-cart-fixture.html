@@ -64,6 +64,27 @@
         </tbody>
     </table>
 
+    <div class="cart_settle clearbox">
+        <dl>
+            <div>
+                <dt>상품 주문 금액</dt>
+                <dd id="total_goods_price_v2">27,132,500원</dd>
+            </div>
+            <div>
+                <dt>부가세</dt>
+                <dd>2,713,250원</dd>
+            </div>
+            <div>
+                <dt>배송비</dt>
+                <dd>0원</dd>
+            </div>
+            <div>
+                <dt>결제 예정금액</dt>
+                <dd>29,845,750원</dd>
+            </div>
+        </dl>
+    </div>
+
     <pre id="result">pending</pre>
 
     <script>
@@ -83,6 +104,7 @@
     <script>
         setTimeout(async () => {
             const result = await scrapeCurrentCart();
+            const summary = extractCurrentCartSummary(result);
             const expected = [
                 { quantity: 10, price: 4500, amount: 45000 },
                 { quantity: 3, price: 9000000, amount: 27000000 },
@@ -96,11 +118,16 @@
                     item.sourceMall === "devicemart" &&
                     item.priceKind === "line-total-derived" &&
                     item.sourceLineAmount === expected[index].amount) &&
-                result.reduce((sum, item) => sum + item.amount, 0) === 27132500;
+                result.reduce((sum, item) => sum + item.amount, 0) === 27132500 &&
+                summary &&
+                summary.productTotal === 27132500 &&
+                summary.vat === 2713250 &&
+                summary.shipping === 0 &&
+                summary.grandTotal === 29845750;
 
             const output = document.getElementById("result");
             output.dataset.pass = String(pass);
-            output.textContent = JSON.stringify({ pass, result }, null, 2);
+            output.textContent = JSON.stringify({ pass, result, summary }, null, 2);
         }, 0);
     </script>
 </body>

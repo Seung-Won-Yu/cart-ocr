@@ -5,11 +5,18 @@
 document.addEventListener('DOMContentLoaded', () => {
     // State Variables
     let currentItems = [];
+    let currentCartSummary = null;
 
     // DOM Elements
     const themeToggleBtn = document.getElementById('theme-toggle');
     
     const tableBody = document.getElementById('table-body');
+    const subtotalRowContainer = document.getElementById('subtotal-row-container');
+    const subtotalPriceEl = document.getElementById('subtotal-price');
+    const vatRowContainer = document.getElementById('vat-row-container');
+    const vatPriceEl = document.getElementById('vat-price');
+    const shippingRowContainer = document.getElementById('shipping-row-container');
+    const shippingPriceEl = document.getElementById('shipping-price');
     const totalRowContainer = document.getElementById('total-row-container');
     const totalPriceEl = document.getElementById('total-price');
     const tableActionsContainer = document.getElementById('table-actions-container');
@@ -20,6 +27,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const downloadCsvBtn = document.getElementById('download-csv-btn');
     const printDocBtn = document.getElementById('print-doc-btn');
     const printTableBody = document.getElementById('print-table-body');
+    const printSubtotalRow = document.getElementById('print-subtotal-row');
+    const printSubtotalPriceEl = document.getElementById('print-subtotal-price');
+    const printVatRow = document.getElementById('print-vat-row');
+    const printVatPriceEl = document.getElementById('print-vat-price');
+    const printShippingRow = document.getElementById('print-shipping-row');
+    const printShippingPriceEl = document.getElementById('print-shipping-price');
     const printTotalPriceEl = document.getElementById('print-total-price');
     const printDateEl = document.getElementById('print-date');
 
@@ -33,9 +46,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const rawData = localStorage.getItem('scraped_cart_data');
     if (rawData) {
         try {
-            const parsedItems = JSON.parse(rawData);
-            if (Array.isArray(parsedItems) && parsedItems.length > 0) {
-                currentItems = normalizeImportedItems(parsedItems);
+            const parsedPayload = JSON.parse(rawData);
+            const importedCart = normalizeImportedCartPayload(parsedPayload);
+            if (importedCart.items.length > 0) {
+                currentItems = importedCart.items;
+                currentCartSummary = importedCart.summary;
                 renderTable();
                 
                 // 로드 완료 후 로컬 스토리지 데이터 청소 (새 창으로 웹 앱을 다시 열 때 중복 로딩 방지)
@@ -76,6 +91,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 </tr>
             `;
             totalRowContainer.classList.add('hidden');
+            setHidden(subtotalRowContainer, true);
+            setHidden(vatRowContainer, true);
+            setHidden(shippingRowContainer, true);
             tableActionsContainer.classList.add('hidden');
             exportSection.classList.add('hidden');
             return;
@@ -119,6 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.addEventListener('click', (e) => {
                 const index = parseInt(e.currentTarget.dataset.index, 10);
                 currentItems.splice(index, 1);
+                if (currentItems.length === 0) currentCartSummary = null;
                 renderTable();
             });
         });
@@ -191,8 +210,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Update Total Sum
     function updateTotalSum() {
-        const total = currentItems.reduce((sum, item) => sum + item.amount, 0);
-        totalPriceEl.textContent = formatNumber(total) + '원';
+        const totals = getCartTotals();
+        setHidden(subtotalRowContainer, !totals.hasSummary);
+        setHidden(vatRowContainer, !totals.hasSummary);
+        setHidden(shippingRowContainer, !totals.hasSummary);
+
+        if (subtotalPriceEl) subtotalPriceEl.textContent = formatNumber(totals.productTotal) + '원';
+        if (vatPriceEl) vatPriceEl.textContent = formatNumber(totals.vat) + '원';
+        if (shippingPriceEl) shippingPriceEl.textContent = formatNumber(totals.shipping) + '원';
+        totalPriceEl.textContent = formatNumber(totals.grandTotal) + '원';
+    }
+
+    function normalizeImportedCartPayload(payload) {
+        const rawItems = Array.isArray(payload) ? payload : (Array.isArray(payload && payload.items) ? payload.items : []);
+        const items = normalizeImportedItems(rawItems);
+        const summary = Array.isArray(payload) ? null : normalizeCartSummary(payload && payload.summary, items);
+
+        return { items, summary };
     }
 
     function normalizeImportedItems(items) {
@@ -218,6 +252,55 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function normalizeCartSummary(summary, items) {
+        if (!summary || typeof summary !== "object") return null;
+
+        const productTotal = parseInteger(summary.productTotal || summary.itemSubtotal, 0);
+        const vat = parseInteger(summary.vat || summary.tax, 0);
+        const shipping = parseInteger(summary.shipping || summary.deliveryFee, 0);
+        const grandTotal = parseInteger(summary.grandTotal || summary.total, 0);
+
+        if (!productTotal && !vat && !shipping && !grandTotal) return null;
+
+        const computedSubtotal = items.reduce((sum, item) => sum + item.amount, 0);
+        const summarySubtotal = productTotal || computedSubtotal;
+        const vatRate = summarySubtotal > 0 && vat > 0 ? vat / summarySubtotal : 0;
+
+        return {
+            sourceMall: summary.sourceMall || "",
+            productTotal: summarySubtotal,
+            vat,
+            vatRate,
+            shipping,
+            grandTotal: grandTotal || summarySubtotal + vat + shipping
+        };
+    }
+
+    function getCartTotals() {
+        const productTotal = currentItems.reduce((sum, item) => sum + item.amount, 0);
+        if (!currentCartSummary) {
+            return {
+                productTotal,
+                vat: 0,
+                shipping: 0,
+                grandTotal: productTotal,
+                hasSummary: false
+            };
+        }
+
+        const vat = currentCartSummary.vatRate > 0 ? Math.round(productTotal * currentCartSummary.vatRate) : 0;
+        const shipping = currentCartSummary.shipping || 0;
+        const grandTotal = productTotal + vat + shipping;
+
+        return {
+            productTotal,
+            vat,
+            shipping,
+            grandTotal,
+            hasSummary: true
+        };
+    }
+
     function parseInteger(value, fallback = 0) {
         if (typeof value === "number" && Number.isFinite(value)) return Math.round(value);
         const parsed = parseInt(String(value || "").replace(/[^0-9-]/g, ""), 10);
@@ -228,6 +311,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const qty = parseInteger(quantity, 1) || 1;
         if (!amount || qty <= 1) return amount || 0;
         return Math.round(amount / qty);
+    }
+
+    function setHidden(element, shouldHide) {
+        if (!element) return;
+        element.classList.toggle('hidden', shouldHide);
     }
 
     // Format utility
@@ -255,8 +343,13 @@ document.addEventListener('DOMContentLoaded', () => {
             md += `| ${index + 1} | ${item.name} | ${item.quantity} | ${formatNumber(item.price)} | ${formatNumber(item.amount)} |\n`;
         });
         
-        const total = currentItems.reduce((sum, item) => sum + item.amount, 0);
-        md += `| **합계** | | | | **${formatNumber(total)}** |\n`;
+        const totals = getCartTotals();
+        if (totals.hasSummary) {
+            md += `| 상품 주문 금액 | | | | ${formatNumber(totals.productTotal)} |\n`;
+            md += `| 부가세 | | | | ${formatNumber(totals.vat)} |\n`;
+            md += `| 배송비 | | | | ${formatNumber(totals.shipping)} |\n`;
+        }
+        md += `| **결제 예정금액** | | | | **${formatNumber(totals.grandTotal)}** |\n`;
 
         navigator.clipboard.writeText(md).then(() => {
             alert('노션/슬랙에 바로 붙여넣을 수 있는 Markdown 표 양식이 클립보드에 복사되었습니다.');
@@ -279,8 +372,13 @@ document.addEventListener('DOMContentLoaded', () => {
             csvContent += `${index + 1},${cleanName},${item.quantity},${item.price},${item.amount}\n`;
         });
 
-        const total = currentItems.reduce((sum, item) => sum + item.amount, 0);
-        csvContent += `합계,,,,${total}\n`;
+        const totals = getCartTotals();
+        if (totals.hasSummary) {
+            csvContent += `상품 주문 금액,,,,${totals.productTotal}\n`;
+            csvContent += `부가세,,,,${totals.vat}\n`;
+            csvContent += `배송비,,,,${totals.shipping}\n`;
+        }
+        csvContent += `결제 예정금액,,,,${totals.grandTotal}\n`;
 
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
@@ -322,8 +420,14 @@ document.addEventListener('DOMContentLoaded', () => {
             printTableBody.appendChild(tr);
         });
 
-        const total = currentItems.reduce((sum, item) => sum + item.amount, 0);
-        printTotalPriceEl.textContent = formatNumber(total) + '원';
+        const totals = getCartTotals();
+        setHidden(printSubtotalRow, !totals.hasSummary);
+        setHidden(printVatRow, !totals.hasSummary);
+        setHidden(printShippingRow, !totals.hasSummary);
+        if (printSubtotalPriceEl) printSubtotalPriceEl.textContent = formatNumber(totals.productTotal) + '원';
+        if (printVatPriceEl) printVatPriceEl.textContent = formatNumber(totals.vat) + '원';
+        if (printShippingPriceEl) printShippingPriceEl.textContent = formatNumber(totals.shipping) + '원';
+        printTotalPriceEl.textContent = formatNumber(totals.grandTotal) + '원';
 
         // 시스템 인쇄 팝업 노출
         window.print();

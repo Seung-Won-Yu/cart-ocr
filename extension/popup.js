@@ -2,7 +2,7 @@
  * CartOCR Scraper - Popup Control Script
  */
 
-const CART_OCR_SCRAPE_ACTION = "scrape_cart_v8";
+const CART_OCR_SCRAPE_ACTION = "scrape_cart_v9";
 
 document.addEventListener('DOMContentLoaded', async () => {
     const statusContainer = document.getElementById('status-container');
@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let activeTab = null;
     let scrapedItems = [];
+    let scrapedCartPayload = null;
 
     // 현재 활성화된 탭 조회 및 지원 쇼핑몰 판별
     try {
@@ -69,11 +70,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             scrapeBtn.disabled = false;
 
             if (response && response.success) {
-                scrapedItems = response.items;
+                scrapedItems = response.items || [];
+                scrapedCartPayload = {
+                    items: scrapedItems,
+                    summary: response.summary || null
+                };
                 if (scrapedItems.length > 0) {
                     const firstItem = scrapedItems[0];
+                    const summaryLine = response.summary && response.summary.vat
+                        ? `<br>부가세 <strong>${formatWon(response.summary.vat)}</strong> / 결제예정 <strong>${formatWon(response.summary.grandTotal)}</strong><br>`
+                        : "";
                     statusDesc.innerHTML = `총 <strong>${scrapedItems.length}개</strong> 수집 완료<br>` +
                         `첫 항목: 단가 <strong>${formatWon(firstItem.price)}</strong> / 합계 <strong>${formatWon(firstItem.amount)}</strong><br>` +
+                        summaryLine +
                         `화면 반영은 아래 <strong>CartOCR 앱으로 전송</strong>을 눌러주세요.`;
                     sendBtn.disabled = false;
                 } else {
@@ -100,7 +109,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 백그라운드 서비스 워커에 대리 전송 및 스토리지 라이팅 위임 요청
         chrome.runtime.sendMessage({ 
             action: "open_app_and_send_data", 
-            data: JSON.stringify(scrapedItems) 
+            data: JSON.stringify(scrapedCartPayload || scrapedItems)
         }, (response) => {
             scrapeBtn.disabled = false;
             sendBtn.disabled = false;

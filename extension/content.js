@@ -3,7 +3,7 @@
  * 핫링크 회피, CORS 우회 및 상품 이미지 저장소 Whitelist 매칭 로직이 탑재된 최종 V6 스크래퍼
  */
 
-var CART_OCR_SCRAPE_ACTION = "scrape_cart_v8";
+var CART_OCR_SCRAPE_ACTION = "scrape_cart_v9";
 
 if (!window.__cartOcrRegisteredActions) {
     window.__cartOcrRegisteredActions = {};
@@ -15,8 +15,12 @@ if (!window.__cartOcrRegisteredActions[CART_OCR_SCRAPE_ACTION]) {
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         if (request.action === CART_OCR_SCRAPE_ACTION) {
             scrapeCurrentCart()
-                .then(result => {
-                    sendResponse({ success: true, items: result });
+                .then(items => {
+                    sendResponse({
+                        success: true,
+                        items,
+                        summary: extractCurrentCartSummary(items)
+                    });
                 })
                 .catch(error => {
                     console.error("CartOCR 파싱 중 오류:", error);
@@ -88,6 +92,72 @@ async function scrapeCurrentCart() {
 function isKnownEmptyCartPage() {
     const text = document.body ? document.body.textContent : "";
     return /장바구니에\s*담긴\s*상품이\s*없습니다|장바구니가\s*비어|장바구니가\s*비었습니다/.test(text);
+}
+
+function extractCurrentCartSummary(items = []) {
+    if (window.location.href.includes("devicemart.co.kr")) {
+        return extractDeviceMartCartSummary(items);
+    }
+
+    return null;
+}
+
+function extractDeviceMartCartSummary(items = []) {
+    const root = document.querySelector(".cart_settle, [class*='cart_settle'], #cart_settle");
+    const hasSummaryDom = Boolean(root) || Boolean(document.querySelector("#total_goods_price_v2, #total_goods_price, [id*='total_goods_price']"));
+    if (!hasSummaryDom) return null;
+
+    const summaryRoot = root || document;
+    const itemSubtotal = items.reduce((sum, item) => sum + (parseInt(item.amount, 10) || 0), 0);
+    const productTotal = extractAmountBySelector([
+        "#total_goods_price_v2",
+        "#total_goods_price",
+        "[id*='total_goods_price']"
+    ]) || extractSettlementAmountByLabel(summaryRoot, /상품\s*주문\s*금액|총\s*상품\s*금액|상품금액/i) || itemSubtotal;
+    const vat = extractSettlementAmountByLabel(summaryRoot, /부가세|VAT/i);
+    const shipping = extractSettlementAmountByLabel(summaryRoot, /배송비|배송\s*비|배송료|shipping/i);
+    const grandTotal = extractSettlementAmountByLabel(summaryRoot, /결제\s*예정\s*금액|결제예정금액|총\s*결제|최종\s*결제|합계금액/i) ||
+        (productTotal + vat + shipping);
+
+    if (!productTotal && !vat && !shipping && !grandTotal) return null;
+
+    return {
+        sourceMall: "devicemart",
+        productTotal,
+        vat,
+        shipping,
+        grandTotal,
+        includesVat: true
+    };
+}
+
+function extractAmountBySelector(selectors) {
+    for (const selector of selectors) {
+        const element = document.querySelector(selector);
+        const amount = element ? extractLastPositiveWonAmount(element.textContent) : 0;
+        if (amount) return amount;
+    }
+
+    return 0;
+}
+
+function extractSettlementAmountByLabel(root, pattern) {
+    const labels = root.querySelectorAll("dt, th, [class*='label'], [class*='tit']");
+
+    for (const label of labels) {
+        const labelText = label.textContent.replace(/\s+/g, " ").trim();
+        if (!pattern.test(labelText)) continue;
+
+        const scope = label.parentElement || label;
+        const valueElement = scope.querySelector("dd, td, strong, [id*='price'], [class*='price']");
+        const valueText = valueElement && valueElement !== label
+            ? valueElement.textContent
+            : scope.textContent.replace(label.textContent, "");
+        const amount = extractLastPositiveWonAmount(valueText);
+        if (amount || /0\s*(?:원|₩)/.test(valueText)) return amount;
+    }
+
+    return 0;
 }
 
 /**
