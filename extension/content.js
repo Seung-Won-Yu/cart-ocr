@@ -3,7 +3,7 @@
  * 핫링크 회피, CORS 우회 및 상품 이미지 저장소 Whitelist 매칭 로직이 탑재된 최종 V6 스크래퍼
  */
 
-var CART_OCR_SCRAPE_ACTION = "scrape_cart_v4";
+var CART_OCR_SCRAPE_ACTION = "scrape_cart_v5";
 
 if (!window.__cartOcrRegisteredActions) {
     window.__cartOcrRegisteredActions = {};
@@ -213,25 +213,11 @@ async function parseKnownMallCart(debugLog) {
             let name = nameEl.textContent.replace(/[\n\t]/g, "").trim();
             if (name.includes("삭제") || name.includes("변경") || name.length < 2) continue;
 
-            const qtyInput = row.querySelector("input[name*='goodsCnt'], input[name*='optionEa'], input[name*='quantity'], input[name*='qty'], input[id*='cnt'], input[id*='quantity'], input[id*='qty'], .qty_input, input[type='number']");
-            let quantity = 1;
-            if (qtyInput) {
-                quantity = parseInt(qtyInput.value, 10) || 1;
-            } else {
-                const qtyCell = row.querySelector("td:nth-child(4), td:nth-child(3)");
-                if (qtyCell) quantity = parseInt(qtyCell.textContent.replace(/[^0-9]/g, ""), 10) || 1;
-            }
-
             const cells = row.querySelectorAll("td");
+            const quantity = extractDeviceMartQuantity(row, cells) || 1;
 
             // 디바이스마트 장바구니의 "상품금액"은 단가가 아니라 수량이 반영된 행 금액입니다.
-            const priceEl = row.querySelector(".goods_price, .price, td.price, span.price_value, strong.price, td.price_cell");
-            let amount = priceEl ? extractPriceFromText(priceEl.textContent) : 0;
-            if (!amount) {
-                amount = extractLineAmountFromRowCells(cells, {
-                    skipElements: [nameEl]
-                });
-            }
+            let amount = extractDeviceMartLineAmount(cells, nameEl);
             let price = amount ? deriveUnitPrice(amount, quantity) : 0;
 
             // 2차: 셀렉터 실패 시 → 행 내 모든 <td>를 순회하며 "원" 포함 셀에서 가격 추출
@@ -398,6 +384,109 @@ function extractQuantityFromContainer(container) {
     if (stepperMatch) return parseInt(stepperMatch[1], 10) || 1;
 
     return 1;
+}
+
+function extractDeviceMartQuantity(row, cells) {
+    const quantityCell = findCellByHeader(cells, /수량|qty|quantity|ea/i);
+    const quantityFromHeader = extractQuantityFromCell(quantityCell);
+    if (quantityFromHeader) return quantityFromHeader;
+
+    const quantityInput = row.querySelector([
+        "input[name*='goodsCnt']",
+        "input[name*='optionEa']",
+        "input[name*='quantity']",
+        "input[name*='qty']",
+        "input[id*='cnt']",
+        "input[id*='quantity']",
+        "input[id*='qty']",
+        ".qty_input",
+        "input[type='number']"
+    ].join(", "));
+    const quantityFromInput = quantityInput ? parseQuantityText(quantityInput.value || quantityInput.textContent) : 0;
+    if (quantityFromInput) return quantityFromInput;
+
+    for (const cell of cells) {
+        const text = cell.textContent || "";
+        if (/(원|₩)|배송|ship|적립|point|납기|일|주/.test(text)) continue;
+        const quantity = extractQuantityFromCell(cell);
+        if (quantity) return quantity;
+    }
+
+    return 1;
+}
+
+function extractQuantityFromCell(cell) {
+    if (!cell) return 0;
+
+    const control = cell.querySelector("input:not([type='hidden']), select");
+    if (control) {
+        const quantity = parseQuantityText(control.value || control.textContent);
+        if (quantity) return quantity;
+    }
+
+    return parseQuantityText(cell.textContent);
+}
+
+function parseQuantityText(value) {
+    const numbers = String(value || "").replace(/,/g, "").match(/[0-9]+/g);
+    if (!numbers) return 0;
+
+    for (const number of numbers) {
+        const quantity = parseInt(number, 10);
+        if (quantity > 0 && quantity <= 1000) return quantity;
+    }
+
+    return 0;
+}
+
+function extractDeviceMartLineAmount(cells, nameEl) {
+    const amountCell = findCellByHeader(cells, /상품금액|주문금액|결제금액|합계|총액|금액|amount|total/i);
+    const headerAmount = amountCell ? extractPriceFromText(amountCell.textContent) : 0;
+    if (headerAmount) return headerAmount;
+
+    const row = nameEl ? nameEl.closest("tr") : null;
+    const priceEl = row ? row.querySelector(".goods_price, .price, td.price, span.price_value, strong.price, td.price_cell") : null;
+    const selectorAmount = priceEl ? extractPriceFromText(priceEl.textContent) : 0;
+    if (selectorAmount) return selectorAmount;
+
+    return extractLineAmountFromRowCells(cells, {
+        skipElements: [nameEl]
+    });
+}
+
+function findCellByHeader(cells, pattern) {
+    for (const cell of cells) {
+        const headerText = getHeaderTextForCell(cell);
+        if (pattern.test(headerText)) return cell;
+    }
+
+    return null;
+}
+
+function getHeaderTextForCell(cell) {
+    if (!cell) return "";
+
+    const row = cell.closest("tr");
+    const table = cell.closest("table");
+    if (!row || !table) return "";
+
+    const rowCells = Array.from(row.children).filter(child => child.matches("td, th"));
+    const index = rowCells.indexOf(cell);
+    if (index === -1) return "";
+
+    const headerRows = Array.from(table.querySelectorAll("thead tr"));
+    if (headerRows.length === 0) {
+        const firstRow = table.querySelector("tr");
+        if (firstRow && firstRow !== row) headerRows.push(firstRow);
+    }
+
+    for (const headerRow of headerRows) {
+        const headerCells = Array.from(headerRow.children).filter(child => child.matches("td, th"));
+        const headerCell = headerCells[index];
+        if (headerCell) return headerCell.textContent.replace(/\s+/g, "").trim();
+    }
+
+    return "";
 }
 
 function getVisibleTextLines(container) {

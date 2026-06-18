@@ -20,30 +20,30 @@
         <tbody>
             <tr>
                 <td><input type="checkbox" checked></td>
-                <td><img src="https://www.devicemart.co.kr/goods_img/test-modem.jpg" alt="LTE-CatM1 내장형 모뎀"></td>
-                <td><a href="/goods/view?no=1">LTE-CatM1 내장형 모뎀 CZ-ME310G1</a></td>
-                <td><input id="goodsCnt1" name="goodsCnt[]" value="5"></td>
-                <td>420,000원</td>
-                <td>0원</td>
-                <td>3~4일</td>
-            </tr>
-            <tr>
-                <td><input type="checkbox" checked></td>
-                <td><img src="https://www.devicemart.co.kr/goods_img/test-mux.jpg" alt="16 Channel Multiplexer"></td>
-                <td><a href="/goods/view?no=2">[해외]16 Channel Multiplexer [COM-00299]</a></td>
-                <td><input id="goodsCnt2" name="goodsCnt[]" value="9"></td>
-                <td>18,000원</td>
+                <td><img src="https://www.devicemart.co.kr/goods_img/test-driver.jpg" alt="H-Bridge Motor Driver"></td>
+                <td><a href="/goods/view?no=1">[해외]H-Bridge Motor Driver 1A [COM-00315]</a></td>
+                <td><button>-</button><span>10</span><button>+</button></td>
+                <td>45,000원</td>
                 <td>0원</td>
                 <td>1주일</td>
             </tr>
             <tr>
                 <td><input type="checkbox" checked></td>
-                <td><img src="https://www.devicemart.co.kr/goods_img/test-servo.jpg" alt="TowerPro 호환 서보모터"></td>
-                <td><a href="/goods/view?no=3">TowerPro 호환 서보모터 MG996R</a></td>
-                <td><input id="goodsCnt3" name="goodsCnt[]" value="7"></td>
-                <td>45,500원</td>
+                <td><img src="https://www.devicemart.co.kr/goods_img/test-brainco.jpg" alt="스마트 바이오닉 핸드"></td>
+                <td><a href="/goods/view?no=2">[해외]스마트 바이오닉 핸드 BrainCo-H1 (Medium size)</a></td>
+                <td><button>-</button><span>3</span><button>+</button></td>
+                <td><del>33,000,000원</del><strong>19% 27,000,000원</strong></td>
                 <td>0원</td>
-                <td>2~3일</td>
+                <td>2주일</td>
+            </tr>
+            <tr>
+                <td><input type="checkbox" checked></td>
+                <td><img src="https://www.devicemart.co.kr/goods_img/test-converter.jpg" alt="DC/DC 변환 컨버터"></td>
+                <td><a href="/goods/view?no=3">전압 강화형 DC/DC 변환 컨버터 24V to 5V [SZH-BPM003]</a></td>
+                <td><button>-</button><span>5</span><button>+</button></td>
+                <td>42,500원</td>
+                <td>0원</td>
+                <td>3~4일</td>
             </tr>
         </tbody>
     </table>
@@ -68,9 +68,9 @@
         setTimeout(async () => {
             const result = await scrapeCurrentCart();
             const expected = [
-                { quantity: 5, price: 84000, amount: 420000 },
-                { quantity: 9, price: 2000, amount: 18000 },
-                { quantity: 7, price: 6500, amount: 45500 }
+                { quantity: 10, price: 4500, amount: 45000 },
+                { quantity: 3, price: 9000000, amount: 27000000 },
+                { quantity: 5, price: 8500, amount: 42500 }
             ];
             const pass = result.length === expected.length &&
                 result.every((item, index) => item.quantity === expected[index].quantity &&
@@ -79,7 +79,7 @@
                     item.sourceMall === "devicemart" &&
                     item.priceKind === "line-total-derived" &&
                     item.sourceLineAmount === expected[index].amount) &&
-                result.reduce((sum, item) => sum + item.amount, 0) === 483500;
+                result.reduce((sum, item) => sum + item.amount, 0) === 27087500;
 
             const output = document.getElementById("result");
             output.dataset.pass = String(pass);
